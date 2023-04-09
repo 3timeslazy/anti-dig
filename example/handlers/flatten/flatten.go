@@ -1,8 +1,11 @@
 package flatten
 
-import "github.com/3timeslazy/anti-dig/example/handlers"
+import (
+	"github.com/3timeslazy/anti-dig/example/handlers"
+	"github.com/3timeslazy/anti-dig/example/observability"
+)
 
-func NewListOfHandlers() handlers.HandlersFlattenParam {
+func NewListOfHandlers(_ observability.Metrics) handlers.HandlersFlattenParam {
 	return handlers.HandlersFlattenParam{
 		Handlers: []handlers.Handler{
 			HandlerA{},

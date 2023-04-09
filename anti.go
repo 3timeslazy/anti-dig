@@ -1,95 +1,191 @@
 package antidig
 
 import (
+	"bytes"
+	"container/list"
 	"fmt"
+	"io"
+	"os"
 	"reflect"
 	"strings"
 )
 
-var FlattenVars = map[string]bool{}
-var FlattenVarsSuffixies = map[string]string{}
+type AntiDig struct {
+	output io.Writer
+	exprs  []string
 
-var TypeWrapper = map[reflect.Type]string{}
+	callstack    *list.List
+	fnsArgs      map[string][]string
+	fnsVars      map[string][]string
+	fnsSuffixies map[string][]string
 
-var TypeSlicename = map[reflect.Type]int{}
+	flattenVars map[string]bool
 
-func Slicename(typ reflect.Type) string {
-	varname := Varname(typ)
-
-	_, ok := TypeSlicename[typ]
-	if !ok {
-		TypeSlicename[typ] = 0
-		return fmt.Sprintf("%s_0", varname)
-	}
-
-	TypeSlicename[typ] += 1
-	return fmt.Sprintf("%s_%d", varname, TypeSlicename[typ])
+	typeVarname    map[reflect.Type]string
+	typeVarnameSeq int
+	typeSeqname    map[reflect.Type]int
+	pkgAlias       map[string]string
 }
 
-var TypeVarname = map[reflect.Type]string{}
-var Seq int
+var Anti = AntiDig{
+	output: os.Stdout,
 
-func Varname(typ reflect.Type) string {
-	varname, ok := TypeVarname[typ]
+	callstack:    list.New(),
+	fnsArgs:      map[string][]string{},
+	fnsVars:      map[string][]string{},
+	fnsSuffixies: map[string][]string{},
+
+	flattenVars: map[string]bool{},
+
+	typeVarname:    map[reflect.Type]string{},
+	typeVarnameSeq: 0,
+	typeSeqname:    map[reflect.Type]int{},
+	pkgAlias:       map[string]string{},
+}
+
+func (anti *AntiDig) Generate() {
+	anti.output = os.Stdout
+
+	decls := [][]byte{
+		[]byte("package main\n"),
+		anti.generateImports(),
+		anti.generateFunc(),
+	}
+
+	for _, decl := range decls {
+		fmt.Fprintln(anti.output, string(decl))
+	}
+}
+
+func (anti *AntiDig) generateFunc() []byte {
+	buf := &bytes.Buffer{}
+
+	fmt.Fprintln(buf, "func main() {")
+	for _, expr := range anti.exprs {
+		fmt.Fprintf(buf, "\t%s\n", expr)
+	}
+	fmt.Fprintln(buf, "}")
+
+	return buf.Bytes()
+}
+
+func (anti *AntiDig) generateImports() []byte {
+	buf := &bytes.Buffer{}
+
+	fmt.Fprintln(buf, "import (")
+
+	for pkg, alias := range anti.pkgAlias {
+		fmt.Fprintf(buf, "\t%s \"%s\"\n", alias, pkg)
+	}
+
+	fmt.Fprintln(buf, ")")
+
+	return buf.Bytes()
+}
+
+func (anti *AntiDig) PushFnCall(fnName string) {
+	anti.callstack.PushBack(fnName)
+}
+
+func (anti *AntiDig) PopFnCall() {
+	elem := anti.callstack.Back()
+	anti.callstack.Remove(elem)
+}
+
+func (anti *AntiDig) AppendFnArg(arg string) {
+	curr := anti.currFn()
+	anti.fnsArgs[curr] = append(anti.fnsArgs[curr], arg)
+}
+
+func (anti *AntiDig) AppendFnVar(varname string) {
+	curr := anti.currFn()
+	anti.fnsVars[curr] = append(anti.fnsVars[curr], varname)
+}
+
+func (anti *AntiDig) AppendFnSuffix(suffix string) {
+	curr := anti.currFn()
+	anti.fnsSuffixies[curr] = append(anti.fnsSuffixies[curr], suffix)
+}
+
+func (anti *AntiDig) FnSuffixes() []string {
+	return anti.fnsSuffixies[anti.currFn()]
+}
+
+func (anti *AntiDig) FnArgs() []string {
+	return anti.fnsArgs[anti.currFn()]
+}
+
+func (anti *AntiDig) FnVars() []string {
+	return anti.fnsVars[anti.currFn()]
+}
+
+func (anti *AntiDig) AddFlatten(varname string, flatten bool) {
+	anti.flattenVars[varname] = flatten
+}
+
+func (anti *AntiDig) Flatten(varname string) bool {
+	return anti.flattenVars[varname]
+}
+
+func (anti *AntiDig) TypeVarname(typ reflect.Type) string {
+	varname, ok := anti.typeVarname[typ]
 	if ok {
 		return varname
 	}
 
-	Seq++
-	TypeVarname[typ] = fmt.Sprintf("var%d", Seq)
-	return TypeVarname[typ]
+	anti.typeVarnameSeq++
+	varname = fmt.Sprintf("var%d", anti.typeVarnameSeq)
+	anti.typeVarname[typ] = varname
+
+	return varname
 }
 
-var PackageAlias = map[string]string{}
-var PkgSeq int
+func (anti *AntiDig) TypeVarnameV2(typ reflect.Type) string {
+	varname, ok := anti.typeVarname[typ]
+	if ok {
+		return varname
+	}
 
-func PkgAlias(pkgname string) string {
-	alias, ok := PackageAlias[pkgname]
+	anti.typeVarnameSeq++
+	anti.typeVarname[typ] = fmt.Sprintf("var%d", anti.typeVarnameSeq)
+	return anti.typeVarname[typ]
+}
+
+func (anti *AntiDig) TypeSeqname(typ reflect.Type) string {
+	varname := anti.TypeVarname(typ)
+
+	_, ok := anti.typeSeqname[typ]
+	if !ok {
+		anti.typeSeqname[typ] = 0
+		return fmt.Sprintf("%s_0", varname)
+	}
+
+	anti.typeSeqname[typ] += 1
+	return fmt.Sprintf("%s_%d", varname, anti.typeSeqname[typ])
+}
+
+func (anti *AntiDig) currFn() string {
+	if anti.callstack.Len() == 0 {
+		return ""
+	}
+	return anti.callstack.Back().Value.(string)
+}
+
+func (anti *AntiDig) Print(expr ...string) {
+	anti.exprs = append(anti.exprs, expr...)
+}
+
+func (anti *AntiDig) PkgAlias(pkgname string) string {
+	alias, ok := anti.pkgAlias[pkgname]
 	if ok {
 		return alias
 	}
 
 	path := strings.Split(pkgname, "/")
 	alias = path[len(path)-1]
-	PackageAlias[pkgname] = alias
+	anti.pkgAlias[pkgname] = alias
 	return alias
-
-	// PkgSeq++
-	// path := strings.Split(pkgname, "/")
-
-	// alias = fmt.Sprintf("%s%d", path[len(path)-1], PkgSeq)
-	// PackageAlias[pkgname] = alias
-	// return alias
 }
 
-var CallExprs []string
-
-func ErrorFunc(results resultList) bool {
-	for _, idx := range results.resultIndexes {
-		if idx == -1 {
-			return true
-		}
-	}
-
-	return false
-}
-
-var PanicOnErr = "\tif err != nil {\n\t\tpanic(err)\n\t}"
-
-func PrintGenerated() {
-	fmt.Println("package main")
-	fmt.Println()
-
-	fmt.Println("import (")
-	for pkg, alias := range PackageAlias {
-		fmt.Printf("\t%s \"%s\"\n", alias, pkg)
-	}
-	fmt.Println(")")
-	fmt.Println()
-
-	fmt.Println("func main() {")
-	for _, callexpr := range CallExprs {
-		fmt.Printf("\t%s\n", callexpr)
-	}
-	fmt.Println("}")
-}
+var PanicExpr = []string{"if err != nil {", "\tpanic(err)", "}"}
+var ErrorInterface = reflect.TypeOf((*error)(nil)).Elem()

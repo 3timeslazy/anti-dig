@@ -7,6 +7,8 @@ import (
 
 type Cron struct{}
 
-func NewCron(bny db.DB, cny config.Config) Cron {
+func NewCron(db db.DB, config config.Config) Cron {
 	return Cron{}
 }
+
+func (cron *Cron) Start() {}
