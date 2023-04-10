@@ -108,13 +108,12 @@ func (s *Scope) Invoke(function interface{}, opts ...InvokeOption) (err error) {
 
 	argsExpr := []string{}
 	for _, arg := range args {
-		argsExpr = append(argsExpr, Varname(arg.Type()))
+		argsExpr = append(argsExpr, Anti.TypeVarname(arg.Type()))
 	}
 
-	callexpr := fmt.Sprintf("FIXME(%s)\n", strings.Join(argsExpr, ", "))
-	CallExprs = append(CallExprs, callexpr)
+	Anti.Print(fmt.Sprintf("FIXME(%s)", strings.Join(argsExpr, ", ")))
 
-	PrintGenerated()
+	Anti.Generate()
 	return nil
 }
 

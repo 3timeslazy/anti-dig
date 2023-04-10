@@ -8,13 +8,18 @@ import (
 	"github.com/3timeslazy/anti-dig/example/handlers/flatten"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
+	"github.com/3timeslazy/anti-dig/example/observability"
 	"github.com/3timeslazy/anti-dig/example/server"
 )
 
 func main() {
 	container := dig.New()
 
-	err := container.Provide(flatten.NewListOfHandlers)
+	err := container.Provide(observability.NewObservability)
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(flatten.NewListOfHandlers)
 	if err != nil {
 		panic(err)
 	}
@@ -49,5 +54,6 @@ func main() {
 }
 
 func Run(cron cron.Cron, server *server.Server) {
-	// return nil
+	go cron.Start()
+	go server.Serve()
 }

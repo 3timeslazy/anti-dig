@@ -246,7 +246,8 @@ func (ps paramSingle) buildWithDecorators(c containerStore) (v reflect.Value, fo
 }
 
 func (ps paramSingle) Build(c containerStore) (reflect.Value, error) {
-	TypeVarname[ps.Type] = Varname(ps.Type)
+	varname := Anti.TypeVarname(ps.Type)
+	Anti.AppendFnArg(varname)
 
 	v, found, err := ps.buildWithDecorators(c)
 	if found {
@@ -417,6 +418,18 @@ func (po paramObject) Build(c containerStore) (reflect.Value, error) {
 		}
 		dest.Field(f.FieldIndex).Set(v)
 	}
+
+	varname := Anti.TypeVarname(po.Type)
+	Anti.AppendFnArg(varname)
+
+	Anti.Print(fmt.Sprintf("%s := %s{", varname, po.Type))
+	for _, field := range fields {
+		pt := reflect.ValueOf(field.Param).FieldByName("Type").Interface().(reflect.Type)
+		varname := Anti.TypeVarname(pt)
+		Anti.Print(fmt.Sprintf("\t%s: %s,", field.FieldName, varname))
+	}
+	Anti.Print("}")
+
 	return dest, nil
 }
 
@@ -642,6 +655,31 @@ func (pt paramGroupedSlice) Build(c containerStore) (reflect.Value, error) {
 		if err != nil {
 			return _noValue, err
 		}
+	}
+
+	flattenVars := []string{}
+	ptElem := pt.Type.Elem()
+	elemname := Anti.TypeVarname(ptElem)
+	varname := Anti.TypeVarname(pt.Type)
+
+	Anti.PkgAlias(ptElem.PkgPath())
+
+	Anti.Print(fmt.Sprintf("%s := %s{", varname, pt.Type))
+	for i := 0; i < itemCount; i++ {
+		name := fmt.Sprintf("%s_%d", elemname, i)
+		if Anti.Flatten(name) {
+			flattenVars = append(flattenVars, name)
+			continue
+		}
+		Anti.Print(fmt.Sprintf("\t%s,", name))
+	}
+	Anti.Print("}")
+
+	for _, flatten := range flattenVars {
+		Anti.Print(fmt.Sprintf(
+			"%s = append(%s, %s...)",
+			varname, varname, flatten,
+		))
 	}
 
 	stores := c.storesToRoot()

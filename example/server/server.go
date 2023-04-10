@@ -15,3 +15,5 @@ type ServerParams struct {
 func NewServer(_ ServerParams) *Server {
 	return nil
 }
+
+func (srv *Server) Serve() {}

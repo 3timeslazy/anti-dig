@@ -154,6 +154,10 @@ func (n *constructorNode) Call(c containerStore) (err error) {
 		}()
 	}
 
+	loc := n.Location()
+	fnName := loc.Package + "." + loc.Name
+	Anti.PushFnCall(fnName)
+
 	args, err := n.paramList.BuildList(c)
 	if err != nil {
 		return errArgumentsFailed{
@@ -162,129 +166,31 @@ func (n *constructorNode) Call(c containerStore) (err error) {
 		}
 	}
 
-	loc := n.Location()
-	resultsList := n.ResultList().Results
-
-	argsVars := []string{}
-	for _, param := range n.ParamList().Params {
-		switch param := param.(type) {
-		case paramSingle:
-			paramVarname := Varname(param.Type)
-			argsVars = append(argsVars, paramVarname)
-
-		case paramObject:
-			paramVarname := Varname(param.Type)
-			argsVars = append(argsVars, paramVarname)
-
-			if param.Type.Kind() != reflect.Struct {
-				panic("only Struct params accepted")
-			}
-
-			beforeExpr := ""
-			afterExpr := ""
-
-			// Param's fields
-			callexpr := fmt.Sprintf("%s := %s{\n", paramVarname, param.Type)
-			for _, field := range param.Fields {
-				switch param := field.Param.(type) {
-				case paramSingle:
-					fieldVarname := Varname(param.Type)
-					callexpr += fmt.Sprintf("\t\t%s: %s,\n", field.FieldName, fieldVarname)
-
-				case paramGroupedSlice:
-					fieldVarname := Varname(param.Type)
-					callexpr += fmt.Sprintf("\t\t%s: %s,\n", field.FieldName, fieldVarname)
-
-					// Create the slice before param
-					beforeExpr += fmt.Sprintf("%s := %s{\n", fieldVarname, param.Type)
-
-					elem := param.Type.Elem()
-					PkgAlias(elem.PkgPath())
-
-					suffix := ""
-					if path, ok := TypeWrapper[elem]; ok {
-						suffix = path
-					}
-
-					cnt := TypeSlicename[elem]
-					elemVarname := Varname(elem)
-					for i := 0; i <= cnt; i++ {
-						varname := fmt.Sprintf("%s_%d", elemVarname, i)
-						if FlattenVars[varname] {
-							suffix := FlattenVarsSuffixies[varname]
-							afterExpr += fmt.Sprintf("%s = append(%s, %s.%s...)\n", fieldVarname, fieldVarname, varname, suffix)
-							continue
-						}
-						beforeExpr += fmt.Sprintf("\t\t%s.%s,\n", varname, suffix)
-					}
-
-					beforeExpr += "\t}"
-
-				default:
-					panic("Unsupported field type")
-				}
-			}
-			callexpr += "\t}"
-			CallExprs = append(CallExprs, beforeExpr)
-			CallExprs = append(CallExprs, afterExpr)
-			CallExprs = append(CallExprs, callexpr)
-
-		default:
-			panic("govno")
-		}
-	}
-
-	returnsErr := ErrorFunc(n.ResultList())
-
-	switch returned := resultsList[0].(type) {
-	case resultSingle:
-		varname := Varname(returned.Type)
-
-		funcexpr := fmt.Sprintf("%s.%s", PkgAlias(loc.Package), loc.Name)
-		expr := fmt.Sprintf("%s := %s(%s)", varname, funcexpr, strings.Join(argsVars, ", "))
-		if returnsErr {
-			expr = fmt.Sprintf("%s, err := %s(%s)", varname, funcexpr, strings.Join(argsVars, ", "))
-			expr += "\n" + PanicOnErr
-		}
-
-		CallExprs = append(CallExprs, expr)
-
-	case resultObject: // dig.Out
-		// TODO: many
-		for _, field := range returned.Fields {
-			switch result := field.Result.(type) {
-			case resultGrouped:
-				TypeWrapper[result.Type] = returned.Type.Field(1).Name
-
-				varname := Slicename(result.Type)
-				if result.Flatten {
-					FlattenVars[varname] = result.Flatten
-					FlattenVarsSuffixies[varname] = returned.Type.Field(1).Name
-				}
-
-				funcexpr := fmt.Sprintf("%s.%s", PkgAlias(loc.Package), loc.Name)
-				expr := fmt.Sprintf("%s := %s(%s)", varname, funcexpr, strings.Join(argsVars, ", "))
-				if returnsErr {
-					expr = fmt.Sprintf("%s, err := %s(%s)", varname, funcexpr, strings.Join(argsVars, ", "))
-					expr += "\n" + PanicOnErr
-				}
-
-				CallExprs = append(CallExprs, expr)
-
-			default:
-				panic("field.Result.(type)")
-			}
-		}
-
-	default:
-		panic("govno")
-	}
-
 	receiver := newStagingContainerWriter()
 	results := c.invoker()(reflect.ValueOf(n.ctor), args)
 	if err := n.resultList.ExtractList(receiver, false /* decorating */, results); err != nil {
 		return errConstructorFailed{Func: n.location, Reason: err}
 	}
+
+	fnArgs := Anti.FnArgs()
+	fnVars := Anti.FnVars()
+	Anti.Print(fmt.Sprintf(
+		"%s := %s(%s)",
+		strings.Join(fnVars, ", "),
+		Anti.PkgAlias(loc.Package)+"."+loc.Name,
+		strings.Join(fnArgs, ", "),
+	))
+
+	for _, fnVar := range fnVars {
+		if fnVar == "err" {
+			Anti.Print(panicExpr...)
+		}
+	}
+	for _, suffix := range Anti.FnSuffixes() {
+		Anti.Print(suffix)
+	}
+
+	Anti.PopFnCall()
 
 	// Commit the result to the original container that this constructor
 	// was supplied to. The provided constructor is only used for a view of

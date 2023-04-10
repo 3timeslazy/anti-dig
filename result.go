@@ -63,6 +63,9 @@ type resultOptions struct {
 	Name  string
 	Group string
 	As    []interface{}
+
+	// Anti
+	ParamField string
 }
 
 // newResult builds a result from the given type.
@@ -251,6 +254,10 @@ func (rl resultList) ExtractList(cw containerWriter, decorated bool, values []re
 			continue
 		}
 
+		if v.Type().Implements(errorInterface) {
+			Anti.AppendFnVar("err")
+		}
+
 		if err, _ := v.Interface().(error); err != nil {
 			return err
 		}
@@ -270,12 +277,15 @@ type resultSingle struct {
 	// If specified, this is a list of types which the value will be made
 	// available as, in addition to its own type.
 	As []reflect.Type
+
+	ParamField string
 }
 
 func newResultSingle(t reflect.Type, opts resultOptions) (resultSingle, error) {
 	r := resultSingle{
-		Type: t,
-		Name: opts.Name,
+		Type:       t,
+		Name:       opts.Name,
+		ParamField: opts.ParamField,
 	}
 
 	var asTypes []reflect.Type
@@ -300,9 +310,10 @@ func newResultSingle(t reflect.Type, opts resultOptions) (resultSingle, error) {
 	}
 
 	return resultSingle{
-		Type: asTypes[0],
-		Name: opts.Name,
-		As:   asTypes[1:],
+		Type:       asTypes[0],
+		Name:       opts.Name,
+		As:         asTypes[1:],
+		ParamField: opts.ParamField,
 	}, nil
 }
 
@@ -325,6 +336,15 @@ func (rs resultSingle) DotResult() []*dot.Result {
 }
 
 func (rs resultSingle) Extract(cw containerWriter, decorated bool, v reflect.Value) {
+	if rs.ParamField != "" {
+		varname := Anti.TypeVarname(rs.Type)
+		v := Anti.FnVars()[0]
+		Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", varname, v, rs.ParamField))
+	} else {
+		varname := Anti.TypeVarname(rs.Type)
+		Anti.AppendFnVar(varname)
+	}
+
 	if decorated {
 		cw.setDecoratedValue(rs.Name, rs.Type, v)
 		return
@@ -383,6 +403,9 @@ func newResultObject(t reflect.Type, opts resultOptions) (resultObject, error) {
 }
 
 func (ro resultObject) Extract(cw containerWriter, decorated bool, v reflect.Value) {
+	varname := Anti.TypeSeqname(ro.Type)
+	Anti.AppendFnVar(varname)
+
 	for _, f := range ro.Fields {
 		f.Result.Extract(cw, decorated, v.Field(f.FieldIndex))
 	}
@@ -434,6 +457,8 @@ func newResultObjectField(idx int, f reflect.StructField, opts resultOptions) (r
 			// can modify in-place because options are passed-by-value.
 			opts.Name = name
 		}
+		opts := opts
+		opts.ParamField = f.Name
 		r, err = newResult(f.Type, opts)
 		if err != nil {
 			return rof, err
@@ -463,6 +488,8 @@ type resultGrouped struct {
 	// If specified, this is a list of types which the value will be made
 	// available as, in addition to its own type.
 	As []reflect.Type
+
+	ParamFieldName string
 }
 
 func (rt resultGrouped) DotResult() []*dot.Result {
@@ -489,9 +516,10 @@ func newResultGrouped(f reflect.StructField) (resultGrouped, error) {
 		return resultGrouped{}, err
 	}
 	rg := resultGrouped{
-		Group:   g.Name,
-		Flatten: g.Flatten,
-		Type:    f.Type,
+		Group:          g.Name,
+		Flatten:        g.Flatten,
+		Type:           f.Type,
+		ParamFieldName: f.Name,
 	}
 	name := f.Tag.Get(_nameTag)
 	optional, _ := isFieldOptional(f)
@@ -516,6 +544,10 @@ func newResultGrouped(f reflect.StructField) (resultGrouped, error) {
 }
 
 func (rt resultGrouped) Extract(cw containerWriter, decorated bool, v reflect.Value) {
+	seqname := Anti.TypeSeqname(rt.Type)
+	Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", seqname, Anti.FnVars()[0], rt.ParamFieldName))
+	Anti.AddFlatten(seqname, rt.Flatten)
+
 	// Decorated values are always flattened.
 	if !decorated && !rt.Flatten {
 		cw.submitGroupedValue(rt.Group, rt.Type, v)
