@@ -147,6 +147,7 @@ type containerStore interface {
 func New(opts ...Option) *Container {
 	s := newScope()
 	c := &Container{scope: s}
+	opts = append(opts, DryRun(true))
 
 	for _, opt := range opts {
 		opt.applyOption(c)
