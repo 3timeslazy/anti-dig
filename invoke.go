@@ -114,8 +114,7 @@ func (s *Scope) Invoke(function interface{}, opts ...InvokeOption) (err error) {
 
 	Anti.Print(fmt.Sprintf("FIXME(%s)", strings.Join(argsExpr, ", ")))
 
-	Anti.Generate()
-	return nil
+	return Anti.Generate()
 }
 
 // Checks that all direct dependencies of the provided parameters are present in

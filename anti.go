@@ -27,6 +27,8 @@ import (
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/3timeslazy/anti-dig/internal/optimiser"
 )
 
 type AntiDig struct {
@@ -44,6 +46,8 @@ type AntiDig struct {
 	typeVarnameSeq int
 	typeSeqname    map[reflect.Type]int
 	pkgAlias       map[string]string
+
+	optimiser *optimiser.Optimiser
 }
 
 var Anti = AntiDig{
@@ -60,18 +64,18 @@ var Anti = AntiDig{
 	typeVarnameSeq: 0,
 	typeSeqname:    map[reflect.Type]int{},
 	pkgAlias:       map[string]string{},
+
+	optimiser: optimiser.New(),
 }
 
-func (anti *AntiDig) Generate() {
+func (anti *AntiDig) Generate() error {
 	decls := []string{
 		"package main\n",
 		anti.generateImports(),
 		anti.generateFunc(),
 	}
 
-	for _, decl := range decls {
-		fmt.Fprintln(anti.output, decl)
-	}
+	return anti.optimiser.PrintOptimised(strings.Join(decls, "\n"))
 }
 
 func (anti *AntiDig) generateFunc() string {
