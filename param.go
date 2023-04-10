@@ -423,7 +423,10 @@ func (po paramObject) Build(c containerStore) (reflect.Value, error) {
 	varname := Anti.TypeVarname(po.Type)
 	Anti.AppendFnArg(varname)
 
-	Anti.Print(fmt.Sprintf("%s := %s{", varname, po.Type))
+	Anti.Print(fmt.Sprintf(
+		"%s := %s.%s{",
+		varname, Anti.PkgAlias(po.Type.PkgPath()), po.Type.Name(),
+	))
 	for _, field := range fields {
 		pt := reflect.ValueOf(field.Param).FieldByName("Type").Interface().(reflect.Type)
 		varname := Anti.TypeVarname(pt)
@@ -635,6 +638,8 @@ func (pt paramGroupedSlice) callGroupProviders(c containerStore) (int, error) {
 }
 
 func (pt paramGroupedSlice) Build(c containerStore) (reflect.Value, error) {
+	printed := len(c.getValueGroup(pt.Group, pt.Type.Elem())) != 0
+
 	// do not call this if we are already inside a decorator since
 	// it will result in an infinite recursion. (i.e. decorate -> params.BuildList() -> Decorate -> params.BuildList...)
 	// this is safe since a value can be decorated at most once in a given scope.
@@ -658,29 +663,31 @@ func (pt paramGroupedSlice) Build(c containerStore) (reflect.Value, error) {
 		}
 	}
 
-	flattenVars := []string{}
-	ptElem := pt.Type.Elem()
-	elemname := Anti.TypeVarname(ptElem)
-	varname := Anti.TypeVarname(pt.Type)
+	if !printed {
+		flattenVars := []string{}
+		ptElem := pt.Type.Elem()
+		elemname := Anti.TypeVarname(ptElem)
+		varname := Anti.TypeVarname(pt.Type)
 
-	Anti.PkgAlias(ptElem.PkgPath())
+		Anti.PkgAlias(ptElem.PkgPath())
 
-	Anti.Print(fmt.Sprintf("%s := %s{", varname, pt.Type))
-	for i := 0; i < itemCount; i++ {
-		name := fmt.Sprintf("%s_%d", elemname, i)
-		if Anti.Flatten(name) {
-			flattenVars = append(flattenVars, name)
-			continue
+		Anti.Print(fmt.Sprintf("%s := %s{", varname, pt.Type))
+		for i := 0; i < itemCount; i++ {
+			name := fmt.Sprintf("%s_%d", elemname, i)
+			if Anti.Flatten(name) {
+				flattenVars = append(flattenVars, name)
+				continue
+			}
+			Anti.Print(fmt.Sprintf("\t%s,", name))
 		}
-		Anti.Print(fmt.Sprintf("\t%s,", name))
-	}
-	Anti.Print("}")
+		Anti.Print("}")
 
-	for _, flatten := range flattenVars {
-		Anti.Print(fmt.Sprintf(
-			"%s = append(%s, %s...)",
-			varname, varname, flatten,
-		))
+		for _, flatten := range flattenVars {
+			Anti.Print(fmt.Sprintf(
+				"%s = append(%s, %s...)",
+				varname, varname, flatten,
+			))
+		}
 	}
 
 	stores := c.storesToRoot()
