@@ -171,5 +171,5 @@ func (anti *AntiDig) PkgAlias(pkgname string) string {
 	return alias
 }
 
-var PanicExpr = []string{"if err != nil {", "\tpanic(err)", "}"}
-var ErrorInterface = reflect.TypeOf((*error)(nil)).Elem()
+var panicExpr = []string{"if err != nil {", "\tpanic(err)", "}"}
+var errorInterface = reflect.TypeOf((*error)(nil)).Elem()

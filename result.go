@@ -254,7 +254,7 @@ func (rl resultList) ExtractList(cw containerWriter, decorated bool, values []re
 			continue
 		}
 
-		if v.Type().Implements(ErrorInterface) {
+		if v.Type().Implements(errorInterface) {
 			Anti.AppendFnVar("err")
 		}
 

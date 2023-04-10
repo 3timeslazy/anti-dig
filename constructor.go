@@ -183,7 +183,7 @@ func (n *constructorNode) Call(c containerStore) (err error) {
 
 	for _, fnVar := range fnVars {
 		if fnVar == "err" {
-			Anti.Print(PanicExpr...)
+			Anti.Print(panicExpr...)
 		}
 	}
 	for _, suffix := range Anti.FnSuffixes() {

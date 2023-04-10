@@ -658,8 +658,11 @@ func (pt paramGroupedSlice) Build(c containerStore) (reflect.Value, error) {
 	}
 
 	flattenVars := []string{}
-	elemname := Anti.TypeVarname(pt.Type.Elem())
+	ptElem := pt.Type.Elem()
+	elemname := Anti.TypeVarname(ptElem)
 	varname := Anti.TypeVarname(pt.Type)
+
+	Anti.PkgAlias(ptElem.PkgPath())
 
 	Anti.Print(fmt.Sprintf("%s := %s{", varname, pt.Type))
 	for i := 0; i < itemCount; i++ {
