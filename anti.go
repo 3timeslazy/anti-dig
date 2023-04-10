@@ -1,7 +1,6 @@
 package antidig
 
 import (
-	"bytes"
 	"container/list"
 	"fmt"
 	"io"
@@ -44,41 +43,39 @@ var Anti = AntiDig{
 }
 
 func (anti *AntiDig) Generate() {
-	decls := [][]byte{
-		[]byte("package main\n"),
+	decls := []string{
+		"package main\n",
 		anti.generateImports(),
 		anti.generateFunc(),
 	}
 
 	for _, decl := range decls {
-		fmt.Fprintln(anti.output, string(decl))
+		fmt.Fprintln(anti.output, decl)
 	}
 }
 
-func (anti *AntiDig) generateFunc() []byte {
-	buf := &bytes.Buffer{}
+func (anti *AntiDig) generateFunc() string {
+	out := "func main() {\n"
 
-	fmt.Fprintln(buf, "func main() {")
 	for _, expr := range anti.exprs {
-		fmt.Fprintf(buf, "\t%s\n", expr)
+		out += fmt.Sprintf("\t%s\n", expr)
 	}
-	fmt.Fprintln(buf, "}")
 
-	return buf.Bytes()
+	out += "}\n"
+
+	return out
 }
 
-func (anti *AntiDig) generateImports() []byte {
-	buf := &bytes.Buffer{}
-
-	fmt.Fprintln(buf, "import (")
+func (anti *AntiDig) generateImports() string {
+	out := "import (\n"
 
 	for pkg, alias := range anti.pkgAlias {
-		fmt.Fprintf(buf, "\t%s \"%s\"\n", alias, pkg)
+		out += fmt.Sprintf("\t%s \"%s\"\n", alias, pkg)
 	}
 
-	fmt.Fprintln(buf, ")")
+	out += ")\n"
 
-	return buf.Bytes()
+	return out
 }
 
 func (anti *AntiDig) PushFnCall(fnName string) {
