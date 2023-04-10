@@ -44,8 +44,6 @@ var Anti = AntiDig{
 }
 
 func (anti *AntiDig) Generate() {
-	anti.output = os.Stdout
-
 	decls := [][]byte{
 		[]byte("package main\n"),
 		anti.generateImports(),
@@ -140,17 +138,6 @@ func (anti *AntiDig) TypeVarname(typ reflect.Type) string {
 	return varname
 }
 
-func (anti *AntiDig) TypeVarnameV2(typ reflect.Type) string {
-	varname, ok := anti.typeVarname[typ]
-	if ok {
-		return varname
-	}
-
-	anti.typeVarnameSeq++
-	anti.typeVarname[typ] = fmt.Sprintf("var%d", anti.typeVarnameSeq)
-	return anti.typeVarname[typ]
-}
-
 func (anti *AntiDig) TypeSeqname(typ reflect.Type) string {
 	varname := anti.TypeVarname(typ)
 
@@ -160,7 +147,7 @@ func (anti *AntiDig) TypeSeqname(typ reflect.Type) string {
 		return fmt.Sprintf("%s_0", varname)
 	}
 
-	anti.typeSeqname[typ] += 1
+	anti.typeSeqname[typ]++
 	return fmt.Sprintf("%s_%d", varname, anti.typeSeqname[typ])
 }
 
