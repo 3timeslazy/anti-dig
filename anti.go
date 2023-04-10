@@ -46,6 +46,7 @@ type AntiDig struct {
 	typeVarnameSeq int
 	typeSeqname    map[reflect.Type]int
 	pkgAlias       map[string]string
+	allPkgAliases  map[string]bool
 
 	optimiser *optimiser.Optimiser
 }
@@ -64,6 +65,7 @@ var Anti = AntiDig{
 	typeVarnameSeq: 0,
 	typeSeqname:    map[reflect.Type]int{},
 	pkgAlias:       map[string]string{},
+	allPkgAliases:  map[string]bool{},
 
 	optimiser: optimiser.New(),
 }
@@ -191,7 +193,20 @@ func (anti *AntiDig) PkgAlias(pkgname string) string {
 
 	path := strings.Split(pkgname, "/")
 	alias = path[len(path)-1]
+
+	if anti.allPkgAliases[alias] {
+		newalias := path[len(path)-2] + path[len(path)-1]
+
+		for i := 0; anti.allPkgAliases[newalias]; i++ {
+			newalias = fmt.Sprintf("%s%d", alias, i)
+		}
+
+		alias = newalias
+	}
+
 	anti.pkgAlias[pkgname] = alias
+	anti.allPkgAliases[alias] = true
+
 	return alias
 }
 
