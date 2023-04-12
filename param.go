@@ -164,6 +164,9 @@ type paramSingle struct {
 	Name     string
 	Optional bool
 	Type     reflect.Type
+
+	// Anti fields
+	NoArg bool
 }
 
 func (ps paramSingle) DotParam() []*dot.Param {
@@ -248,7 +251,9 @@ func (ps paramSingle) buildWithDecorators(c containerStore) (v reflect.Value, fo
 
 func (ps paramSingle) Build(c containerStore) (reflect.Value, error) {
 	varname := Anti.TypeVarname(ps.Type)
-	Anti.AppendFnArg(varname)
+	if !ps.NoArg {
+		Anti.AppendFnArg(varname)
+	}
 
 	v, found, err := ps.buildWithDecorators(c)
 	if found {
@@ -491,6 +496,8 @@ func newParamObjectField(idx int, f reflect.StructField, c containerStore) (para
 		if err != nil {
 			return pof, err
 		}
+
+		ps.NoArg = true
 
 		p = ps
 	}

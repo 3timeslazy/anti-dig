@@ -37,6 +37,7 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 	}
 	var11 = append(var11, var8_0.Handlers...)
 	var12 := server.ServerParams{
+		Config:   var3,
 		Handlers: var11,
 	}
 	var4 := server.NewServer(var12)
