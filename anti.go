@@ -70,26 +70,52 @@ var Anti = AntiDig{
 	optimiser: optimiser.New(),
 }
 
-func (anti *AntiDig) Generate() error {
+func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 	decls := []string{
 		"package main\n",
 		anti.generateImports(),
-		anti.generateFunc(),
+		anti.generateFunc(invokedType),
 	}
 
 	return anti.optimiser.PrintOptimised(strings.Join(decls, "\n"))
 }
 
-func (anti *AntiDig) generateFunc() string {
-	out := "func main() {\n"
+func (anti *AntiDig) generateFunc(invokedType reflect.Type) string {
+	anti.exprs = append(anti.exprs, anti.returnStmt(invokedType))
+
+	returnedTypes := anti.returnedTypes(invokedType)
+	out := fmt.Sprintf("func Provide() (%s) {\n", returnedTypes)
 
 	for _, expr := range anti.exprs {
 		out += fmt.Sprintf("\t%s\n", expr)
 	}
-
 	out += "}\n"
 
 	return out
+}
+
+func (anti *AntiDig) returnStmt(invokedType reflect.Type) string {
+	returnStmt := "return "
+	for i := 0; i < invokedType.NumIn(); i++ {
+		typ := invokedType.In(i)
+		returnStmt += fmt.Sprintf("%s, ", anti.TypeVarname(typ))
+	}
+	return strings.TrimRight(returnStmt, ", ")
+}
+
+func (anti *AntiDig) returnedTypes(invokedType reflect.Type) string {
+	returnStmt := ""
+	for i := 0; i < invokedType.NumIn(); i++ {
+		typ := invokedType.In(i)
+		prefix := ""
+
+		if typ.Kind() == reflect.Pointer {
+			typ = typ.Elem()
+			prefix = "*"
+		}
+		returnStmt += fmt.Sprintf("%s%s.%s, ", prefix, anti.PkgAlias(typ.PkgPath()), typ.Name())
+	}
+	return strings.TrimRight(returnStmt, ", ")
 }
 
 func (anti *AntiDig) generateImports() string {
@@ -210,5 +236,22 @@ func (anti *AntiDig) PkgAlias(pkgname string) string {
 	return alias
 }
 
-var panicExpr = []string{"if err != nil {", "\tpanic(err)", "}"}
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
+var errExpr = []string{"if err != nil {", "\tpanic(err)", "}"}
+
+func (anti *AntiDig) SetErrorExpr(fntype reflect.Type) {
+	errStmt := "\treturn "
+	for i := 0; i < fntype.NumIn(); i++ {
+		typ := fntype.In(i)
+
+		switch typ.Kind() {
+		case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
+			errStmt += "nil, "
+		default:
+			alias := Anti.PkgAlias(typ.PkgPath())
+			errStmt += fmt.Sprintf("%s.%s{}, ", alias, typ.Name())
+		}
+	}
+	errStmt = strings.TrimRight(errStmt, ", ")
+	errExpr = []string{"if err != nil {", errStmt, "}"}
+}

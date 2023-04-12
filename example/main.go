@@ -5,11 +5,11 @@ import (
 	"github.com/3timeslazy/anti-dig/example/config"
 	"github.com/3timeslazy/anti-dig/example/cron"
 	"github.com/3timeslazy/anti-dig/example/db"
-	grpcserver "github.com/3timeslazy/anti-dig/example/grpc/server"
+	grpcserv "github.com/3timeslazy/anti-dig/example/grpc/server"
 	"github.com/3timeslazy/anti-dig/example/handlers/flatten"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
-	httpserver "github.com/3timeslazy/anti-dig/example/http/server"
+	httpserv "github.com/3timeslazy/anti-dig/example/http/server"
 	"github.com/3timeslazy/anti-dig/example/observability"
 )
 
@@ -44,11 +44,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = container.Provide(httpserver.NewServer)
+	err = container.Provide(httpserv.NewServer)
 	if err != nil {
 		panic(err)
 	}
-	err = container.Provide(grpcserver.NewServer)
+	err = container.Provide(grpcserv.NewServer)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +58,7 @@ func main() {
 	}
 }
 
-func Run(cron cron.Cron, httpsrv *httpserver.Server, grpcsrv *grpcserver.Server) {
+func Run(cron cron.Cron, httpsrv *httpserv.Server, grpcsrv *grpcserv.Server) {
 	go cron.Start()
 	go httpsrv.Serve()
 	go grpcsrv.Serve()

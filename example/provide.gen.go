@@ -1,32 +1,36 @@
 package main
 
 import (
-	config "github.com/3timeslazy/anti-dig/example/config"
-	cron "github.com/3timeslazy/anti-dig/example/cron"
-	db "github.com/3timeslazy/anti-dig/example/db"
+	"github.com/3timeslazy/anti-dig/example/config"
+	"github.com/3timeslazy/anti-dig/example/cron"
+	"github.com/3timeslazy/anti-dig/example/db"
 	grpcserver "github.com/3timeslazy/anti-dig/example/grpc/server"
-	handlers "github.com/3timeslazy/anti-dig/example/handlers"
-	flatten "github.com/3timeslazy/anti-dig/example/handlers/flatten"
-	handlerv0 "github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
-	handlerv1 "github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
-	server "github.com/3timeslazy/anti-dig/example/http/server"
-	observability "github.com/3timeslazy/anti-dig/example/observability"
+	"github.com/3timeslazy/anti-dig/example/handlers"
+	"github.com/3timeslazy/anti-dig/example/handlers/flatten"
+	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
+	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
+	"github.com/3timeslazy/anti-dig/example/http/server"
+	"github.com/3timeslazy/anti-dig/example/observability"
 )
 
-func main() {
+func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 	var2, err := db.NewDB()
 	if err != nil {
-		panic(err)
+		return cron.Cron{}, nil, nil
 	}
 	var3 := config.NewConfig()
 	var1 := cron.NewCron(var2, var3)
 	var6_0 := observability.NewObservability(var3)
+
 	var8_0 := flatten.NewListOfHandlers(var6_0.Metrics)
+
 	var10_0, err := handlerv0.NewHandlerV0(var2)
 	if err != nil {
-		panic(err)
+		return cron.Cron{}, nil, nil
 	}
+
 	var10_1 := handlerv1.NewHandlerV1()
+
 	var11 := []handlers.Handler{
 		var10_0.Handler,
 		var10_1.Handler,
@@ -40,5 +44,5 @@ func main() {
 		Handlers: var11,
 	}
 	var13 := grpcserver.NewServer(var14)
-	FIXME(var1, var4, var13)
+	return var1, var4, var13
 }

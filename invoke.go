@@ -24,7 +24,6 @@ package antidig
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/3timeslazy/anti-dig/internal/digreflect"
 	"github.com/3timeslazy/anti-dig/internal/graph"
@@ -89,7 +88,9 @@ func (s *Scope) Invoke(function interface{}, opts ...InvokeOption) (err error) {
 		s.isVerifiedAcyclic = true
 	}
 
-	args, err := pl.BuildList(s)
+	Anti.SetErrorExpr(ftype)
+
+	_, err = pl.BuildList(s)
 	if err != nil {
 		return errArgumentsFailed{
 			Func:   digreflect.InspectFunc(function),
@@ -107,14 +108,7 @@ func (s *Scope) Invoke(function interface{}, opts ...InvokeOption) (err error) {
 		}()
 	}
 
-	argsExpr := []string{}
-	for _, arg := range args {
-		argsExpr = append(argsExpr, Anti.TypeVarname(arg.Type()))
-	}
-
-	Anti.Print(fmt.Sprintf("FIXME(%s)", strings.Join(argsExpr, ", ")))
-
-	return Anti.Generate()
+	return Anti.Generate(ftype)
 }
 
 // Checks that all direct dependencies of the provided parameters are present in
