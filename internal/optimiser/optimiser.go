@@ -27,6 +27,7 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
+	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
@@ -41,43 +42,24 @@ func New() *Optimiser {
 	}
 }
 
-func (opt *Optimiser) PrintOptimised(src string) error {
+func (opt *Optimiser) PrintOptimised(generated string) error {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "main.gen.go", src, 0)
+
+	generatedFile, err := parser.ParseFile(fset, "provide.gen.go", generated, parser.ParseComments)
 	if err != nil {
 		return err
 	}
 
 	// Gather information
-	astutil.Apply(file, nil, func(c *astutil.Cursor) bool {
-		node := c.Node()
-
-		switch node := node.(type) {
-		case *ast.AssignStmt:
-			if len(node.Rhs) > 1 {
-				panic("len(Rhs) > 1 currently unsupported")
-			}
-
-			varname := node.Lhs[0].(*ast.Ident).Name
-
-			switch rhs := node.Rhs[0].(type) {
-			case *ast.SelectorExpr:
-				repl := fmt.Sprintf("%s.%s", rhs.X, rhs.Sel)
-				opt.selRepls[varname] = repl
-
-				c.Delete()
-
-			default:
-			}
-
-		default:
-		}
+	astutil.Apply(generatedFile, nil, func(c *astutil.Cursor) bool {
+		opt.removePkgAliases(c)
+		opt.removeAssigns(c)
 
 		return true
 	})
 
-	// Replace variables
-	astutil.Apply(file, nil, func(c *astutil.Cursor) bool {
+	// Replace all idents
+	astutil.Apply(generatedFile, nil, func(c *astutil.Cursor) bool {
 		node := c.Node()
 
 		switch ident := node.(type) {
@@ -92,17 +74,48 @@ func (opt *Optimiser) PrintOptimised(src string) error {
 			}
 
 			ident.Name = repl
-
-			c.Replace(ident)
 		}
 
 		return true
 	})
 
-	err = printer.Fprint(os.Stdout, fset, file)
+	err = printer.Fprint(os.Stdout, fset, generatedFile)
 	if err != nil {
 		return err
 	}
 
 	return err
+}
+
+func (opt *Optimiser) removePkgAliases(c *astutil.Cursor) {
+	node := c.Node()
+
+	pkg, ok := node.(*ast.ImportSpec)
+	if !ok {
+		return
+	}
+	if strings.HasSuffix(pkg.Path.Value, "/"+pkg.Name.Name+`"`) {
+		pkg.Name = nil
+	}
+}
+
+func (opt *Optimiser) removeAssigns(c *astutil.Cursor) {
+	node := c.Node()
+
+	switch node := node.(type) {
+	case *ast.AssignStmt:
+		if len(node.Rhs) > 1 {
+			panic("len(Rhs) > 1 currently unsupported")
+		}
+
+		varname := node.Lhs[0].(*ast.Ident).Name
+
+		switch rhs := node.Rhs[0].(type) {
+		case *ast.SelectorExpr:
+			repl := fmt.Sprintf("%s.%s", rhs.X, rhs.Sel)
+			opt.selRepls[varname] = repl
+
+			c.Delete()
+		}
+	}
 }
