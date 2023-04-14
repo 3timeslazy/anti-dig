@@ -29,21 +29,23 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 		return cron.Cron{}, nil, nil
 	}
 
-	var10_1 := handlerv1.NewHandlerV1()
-
-	var11 := []handlers.Handler{
+	var11_httpHandlers := []handlers.Handler{
 		var10_0.Handler,
-		var10_1.Handler,
 	}
-	var11 = append(var11, var8_0.Handlers...)
+	var11_httpHandlers = append(var11_httpHandlers, var8_0.Handlers...)
 	var12 := server.ServerParams{
 		Config:   var3,
-		Handlers: var11,
+		Handlers: var11_httpHandlers,
 	}
 	var4 := server.NewServer(var12)
-	var14 := grpcserver.ServerParams{
-		Handlers: var11,
+	var14_0 := handlerv1.NewHandlerV1()
+
+	var16_grpcHandlers := []handlers.Handler{
+		var14_0.Handler,
 	}
-	var13 := grpcserver.NewServer(var14)
+	var17 := grpcserver.ServerParams{
+		Handlers: var16_grpcHandlers,
+	}
+	var13 := grpcserver.NewServer(var17)
 	return var1, var4, var13
 }

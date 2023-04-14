@@ -5,8 +5,8 @@ import (
 	"github.com/3timeslazy/anti-dig/example/handlers"
 )
 
-func NewHandlerV0(_ db.DB) (handlers.HandlersParam, error) {
-	return handlers.HandlersParam{
+func NewHandlerV0(_ db.DB) (handlers.HandlersHTTP, error) {
+	return handlers.HandlersHTTP{
 		Handler: HandlerV0{},
 	}, nil
 }

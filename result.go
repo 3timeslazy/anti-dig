@@ -545,7 +545,7 @@ func newResultGrouped(f reflect.StructField) (resultGrouped, error) {
 }
 
 func (rt resultGrouped) Extract(cw containerWriter, decorated bool, v reflect.Value) {
-	seqname := Anti.TypeSeqname(rt.Type)
+	seqname := Anti.GroupSeqname(rt.Type, rt.Group)
 	Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", seqname, Anti.FnVars()[0], rt.ParamFieldName))
 	Anti.AddFlatten(seqname, rt.Flatten)
 

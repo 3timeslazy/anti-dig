@@ -11,7 +11,7 @@ type Server struct{}
 type ServerParams struct {
 	dig.In
 	Config   config.Config
-	Handlers []handlers.Handler `group:"handlers"`
+	Handlers []handlers.Handler `group:"http_handlers"`
 }
 
 func NewServer(_ ServerParams) *Server {

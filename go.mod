@@ -3,6 +3,7 @@ module github.com/3timeslazy/anti-dig
 go 1.18
 
 require (
+	github.com/iancoleman/strcase v0.2.0
 	github.com/stretchr/testify v1.7.1
 	golang.org/x/tools v0.8.0
 )

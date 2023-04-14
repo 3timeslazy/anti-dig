@@ -434,7 +434,15 @@ func (po paramObject) Build(c containerStore) (reflect.Value, error) {
 	))
 	for _, field := range fields {
 		pt := reflect.ValueOf(field.Param).FieldByName("Type").Interface().(reflect.Type)
-		varname := Anti.TypeVarname(pt)
+		varname := ""
+
+		group, ok := field.Param.(paramGroupedSlice)
+		if ok {
+			varname = Anti.GroupVarname(pt, group.Group)
+		} else {
+			varname = Anti.TypeVarname(pt)
+		}
+
 		Anti.Print(fmt.Sprintf("\t%s: %s,", field.FieldName, varname))
 	}
 	Anti.Print("}")
@@ -673,8 +681,8 @@ func (pt paramGroupedSlice) Build(c containerStore) (reflect.Value, error) {
 	if !printed {
 		flattenVars := []string{}
 		ptElem := pt.Type.Elem()
-		elemname := Anti.TypeVarname(ptElem)
-		varname := Anti.TypeVarname(pt.Type)
+		elemname := Anti.GroupVarname(ptElem, pt.Group)
+		varname := Anti.GroupVarname(pt.Type, pt.Group)
 
 		Anti.PkgAlias(ptElem.PkgPath())
 

@@ -9,7 +9,7 @@ type Server struct{}
 
 type ServerParams struct {
 	dig.In
-	Handlers []handlers.Handler `group:"handlers"`
+	Handlers []handlers.Handler `group:"grpc_handlers"`
 }
 
 func NewServer(_ ServerParams) *Server {

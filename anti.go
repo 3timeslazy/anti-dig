@@ -29,6 +29,8 @@ import (
 	"strings"
 
 	"github.com/3timeslazy/anti-dig/internal/optimiser"
+
+	"github.com/iancoleman/strcase"
 )
 
 type AntiDig struct {
@@ -42,13 +44,18 @@ type AntiDig struct {
 
 	flattenVars map[string]bool
 
-	typeVarname    map[reflect.Type]string
+	typeVarname    map[typeKey]string
 	typeVarnameSeq int
-	typeSeqname    map[reflect.Type]int
+	typeSeqname    map[typeKey]int
 	pkgAlias       map[string]string
 	allPkgAliases  map[string]bool
 
 	optimiser *optimiser.Optimiser
+}
+
+type typeKey struct {
+	Group string
+	Type  reflect.Type
 }
 
 var Anti = AntiDig{
@@ -61,9 +68,9 @@ var Anti = AntiDig{
 
 	flattenVars: map[string]bool{},
 
-	typeVarname:    map[reflect.Type]string{},
+	typeVarname:    map[typeKey]string{},
 	typeVarnameSeq: 0,
-	typeSeqname:    map[reflect.Type]int{},
+	typeSeqname:    map[typeKey]int{},
 	pkgAlias:       map[string]string{},
 	allPkgAliases:  map[string]bool{},
 
@@ -175,29 +182,44 @@ func (anti *AntiDig) Flatten(varname string) bool {
 }
 
 func (anti *AntiDig) TypeVarname(typ reflect.Type) string {
-	varname, ok := anti.typeVarname[typ]
+	return anti.GroupVarname(typ, "")
+}
+
+func (anti *AntiDig) GroupVarname(typ reflect.Type, group string) string {
+	key := typeKey{Type: typ, Group: group}
+
+	varname, ok := anti.typeVarname[key]
 	if ok {
 		return varname
 	}
 
 	anti.typeVarnameSeq++
 	varname = fmt.Sprintf("var%d", anti.typeVarnameSeq)
-	anti.typeVarname[typ] = varname
+	if group != "" {
+		varname += "_" + strcase.ToLowerCamel(group)
+	}
+
+	anti.typeVarname[key] = varname
 
 	return varname
 }
 
 func (anti *AntiDig) TypeSeqname(typ reflect.Type) string {
-	varname := anti.TypeVarname(typ)
+	return anti.GroupSeqname(typ, "")
+}
 
-	_, ok := anti.typeSeqname[typ]
+func (anti *AntiDig) GroupSeqname(typ reflect.Type, group string) string {
+	key := typeKey{Type: typ, Group: group}
+	varname := anti.GroupVarname(typ, group)
+
+	_, ok := anti.typeSeqname[key]
 	if !ok {
-		anti.typeSeqname[typ] = 0
+		anti.typeSeqname[key] = 0
 		return fmt.Sprintf("%s_0", varname)
 	}
 
-	anti.typeSeqname[typ]++
-	return fmt.Sprintf("%s_%d", varname, anti.typeSeqname[typ])
+	anti.typeSeqname[key]++
+	return fmt.Sprintf("%s_%d", varname, anti.typeSeqname[key])
 }
 
 func (anti *AntiDig) currFn() string {
