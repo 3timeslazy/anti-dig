@@ -16,7 +16,7 @@ import (
 func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 	var2, err := db.NewDB()
 	if err != nil {
-		return cron.Cron{}, nil, nil
+		return nil, nil, nil
 	}
 	var3 := config.NewConfig()
 	var1 := cron.NewCron(var2, var3)
@@ -26,7 +26,7 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 
 	var10_0, err := handlerv0.NewHandlerV0(var2)
 	if err != nil {
-		return cron.Cron{}, nil, nil
+		return nil, nil, nil
 	}
 
 	var11_httpHandlers := []handlers.Handler{

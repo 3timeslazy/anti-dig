@@ -5,10 +5,10 @@ import (
 	"github.com/3timeslazy/anti-dig/example/db"
 )
 
-type Cron struct{}
-
-func NewCron(db db.DB, config config.Config) Cron {
-	return Cron{}
+type Cron interface {
+	Start()
 }
 
-func (cron *Cron) Start() {}
+func NewCron(db db.DB, config config.Config) Cron {
+	return nil
+}

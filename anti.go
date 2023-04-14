@@ -267,7 +267,7 @@ func (anti *AntiDig) SetErrorExpr(fntype reflect.Type) {
 		typ := fntype.In(i)
 
 		switch typ.Kind() {
-		case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
+		case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice, reflect.Interface:
 			errStmt += "nil, "
 		default:
 			alias := Anti.PkgAlias(typ.PkgPath())
