@@ -3,6 +3,8 @@ package main
 import (
 	dig "github.com/3timeslazy/anti-dig"
 	"github.com/3timeslazy/anti-dig/example/config"
+	"github.com/3timeslazy/anti-dig/example/consumer"
+	"github.com/3timeslazy/anti-dig/example/consumer/queue"
 	"github.com/3timeslazy/anti-dig/example/cron"
 	"github.com/3timeslazy/anti-dig/example/db"
 	grpcserv "github.com/3timeslazy/anti-dig/example/grpc/server"
@@ -49,6 +51,18 @@ func main() {
 		panic(err)
 	}
 	err = container.Provide(grpcserv.NewServer)
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(consumer.New)
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(queue.New1, dig.Name("queue_1"))
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(queue.New2, dig.Name("queue_2"))
 	if err != nil {
 		panic(err)
 	}

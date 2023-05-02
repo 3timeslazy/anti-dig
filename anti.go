@@ -44,17 +44,19 @@ type AntiDig struct {
 
 	flattenVars map[string]bool
 
-	typeVarname    map[typeKey]string
-	typeVarnameSeq int
-	typeSeqname    map[typeKey]int
-	pkgAlias       map[string]string
-	allPkgAliases  map[string]bool
+	varnames      map[typeAlias]string
+	groupVarnames map[typeAlias]string
+	varnameSeq    int
+	seqnames      map[typeAlias]int
+
+	pkgAlias      map[string]string
+	allPkgAliases map[string]bool
 
 	optimiser *optimiser.Optimiser
 }
 
-type typeKey struct {
-	Group string
+type typeAlias struct {
+	Alias string
 	Type  reflect.Type
 }
 
@@ -68,11 +70,13 @@ var Anti = AntiDig{
 
 	flattenVars: map[string]bool{},
 
-	typeVarname:    map[typeKey]string{},
-	typeVarnameSeq: 0,
-	typeSeqname:    map[typeKey]int{},
-	pkgAlias:       map[string]string{},
-	allPkgAliases:  map[string]bool{},
+	varnames:      map[typeAlias]string{},
+	groupVarnames: map[typeAlias]string{},
+	varnameSeq:    0,
+	seqnames:      map[typeAlias]int{},
+
+	pkgAlias:      map[string]string{},
+	allPkgAliases: map[string]bool{},
 
 	optimiser: optimiser.New(),
 }
@@ -105,7 +109,7 @@ func (anti *AntiDig) returnStmt(invokedType reflect.Type) string {
 	returnStmt := "return "
 	for i := 0; i < invokedType.NumIn(); i++ {
 		typ := invokedType.In(i)
-		returnStmt += fmt.Sprintf("%s, ", anti.TypeVarname(typ))
+		returnStmt += fmt.Sprintf("%s, ", anti.Varname(typ))
 	}
 	return strings.TrimRight(returnStmt, ", ")
 }
@@ -181,45 +185,64 @@ func (anti *AntiDig) Flatten(varname string) bool {
 	return anti.flattenVars[varname]
 }
 
-func (anti *AntiDig) TypeVarname(typ reflect.Type) string {
-	return anti.GroupVarname(typ, "")
-}
+func (anti *AntiDig) NamedVarname(name string, typ reflect.Type) string {
+	key := typeAlias{Type: typ, Alias: name}
 
-func (anti *AntiDig) GroupVarname(typ reflect.Type, group string) string {
-	key := typeKey{Type: typ, Group: group}
-
-	varname, ok := anti.typeVarname[key]
+	varname, ok := anti.varnames[key]
 	if ok {
 		return varname
 	}
 
-	anti.typeVarnameSeq++
-	varname = fmt.Sprintf("var%d", anti.typeVarnameSeq)
-	if group != "" {
-		varname += "_" + strcase.ToLowerCamel(group)
+	anti.varnameSeq++
+	varname = fmt.Sprintf("var%d", anti.varnameSeq)
+	if name != "" {
+		varname += "_" + strcase.ToLowerCamel(name)
 	}
 
-	anti.typeVarname[key] = varname
+	anti.varnames[key] = varname
 
 	return varname
 }
 
-func (anti *AntiDig) TypeSeqname(typ reflect.Type) string {
-	return anti.GroupSeqname(typ, "")
+func (anti *AntiDig) Varname(typ reflect.Type) string {
+	return anti.NamedVarname("", typ)
 }
 
-func (anti *AntiDig) GroupSeqname(typ reflect.Type, group string) string {
-	key := typeKey{Type: typ, Group: group}
-	varname := anti.GroupVarname(typ, group)
+func (anti *AntiDig) GrouppedVarname(group string, typ reflect.Type) string {
+	key := typeAlias{Type: typ, Alias: group}
 
-	_, ok := anti.typeSeqname[key]
+	varname, ok := anti.groupVarnames[key]
+	if ok {
+		return varname
+	}
+
+	anti.varnameSeq++
+	varname = fmt.Sprintf("var%d", anti.varnameSeq)
+	if group != "" {
+		varname += "_" + strcase.ToLowerCamel(group)
+	}
+
+	anti.groupVarnames[key] = varname
+
+	return varname
+}
+
+func (anti *AntiDig) Seqname(typ reflect.Type) string {
+	return anti.GrouppedSeqname("", typ)
+}
+
+func (anti *AntiDig) GrouppedSeqname(group string, typ reflect.Type) string {
+	key := typeAlias{Type: typ, Alias: group}
+	varname := anti.GrouppedVarname(group, typ)
+
+	_, ok := anti.seqnames[key]
 	if !ok {
-		anti.typeSeqname[key] = 0
+		anti.seqnames[key] = 0
 		return fmt.Sprintf("%s_0", varname)
 	}
 
-	anti.typeSeqname[key]++
-	return fmt.Sprintf("%s_%d", varname, anti.typeSeqname[key])
+	anti.seqnames[key]++
+	return fmt.Sprintf("%s_%d", varname, anti.seqnames[key])
 }
 
 func (anti *AntiDig) currFn() string {

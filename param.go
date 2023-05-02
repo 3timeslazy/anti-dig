@@ -250,7 +250,7 @@ func (ps paramSingle) buildWithDecorators(c containerStore) (v reflect.Value, fo
 }
 
 func (ps paramSingle) Build(c containerStore) (reflect.Value, error) {
-	varname := Anti.TypeVarname(ps.Type)
+	varname := Anti.NamedVarname(ps.Name, ps.Type)
 	if !ps.NoArg {
 		Anti.AppendFnArg(varname)
 	}
@@ -425,7 +425,7 @@ func (po paramObject) Build(c containerStore) (reflect.Value, error) {
 		dest.Field(f.FieldIndex).Set(v)
 	}
 
-	varname := Anti.TypeVarname(po.Type)
+	varname := Anti.Varname(po.Type)
 	Anti.AppendFnArg(varname)
 
 	Anti.Print(fmt.Sprintf(
@@ -436,11 +436,15 @@ func (po paramObject) Build(c containerStore) (reflect.Value, error) {
 		pt := reflect.ValueOf(field.Param).FieldByName("Type").Interface().(reflect.Type)
 		varname := ""
 
-		group, ok := field.Param.(paramGroupedSlice)
-		if ok {
-			varname = Anti.GroupVarname(pt, group.Group)
-		} else {
-			varname = Anti.TypeVarname(pt)
+		switch param := field.Param.(type) {
+		case paramGroupedSlice:
+			varname = Anti.GrouppedVarname(param.Group, pt)
+
+		case paramSingle:
+			varname = Anti.NamedVarname(param.Name, pt)
+
+		default:
+			varname = Anti.Varname(pt)
 		}
 
 		Anti.Print(fmt.Sprintf("\t%s: %s,", field.FieldName, varname))
@@ -681,8 +685,8 @@ func (pt paramGroupedSlice) Build(c containerStore) (reflect.Value, error) {
 	if !printed {
 		flattenVars := []string{}
 		ptElem := pt.Type.Elem()
-		elemname := Anti.GroupVarname(ptElem, pt.Group)
-		varname := Anti.GroupVarname(pt.Type, pt.Group)
+		elemname := Anti.GrouppedVarname(pt.Group, ptElem)
+		varname := Anti.GrouppedVarname(pt.Group, pt.Type)
 
 		Anti.PkgAlias(ptElem.PkgPath())
 

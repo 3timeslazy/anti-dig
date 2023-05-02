@@ -338,11 +338,11 @@ func (rs resultSingle) DotResult() []*dot.Result {
 
 func (rs resultSingle) Extract(cw containerWriter, decorated bool, v reflect.Value) {
 	if rs.ParamField != "" {
-		varname := Anti.TypeVarname(rs.Type)
+		varname := Anti.Varname(rs.Type)
 		v := Anti.FnVars()[0]
 		Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", varname, v, rs.ParamField))
 	} else {
-		varname := Anti.TypeVarname(rs.Type)
+		varname := Anti.NamedVarname(rs.Name, rs.Type)
 		Anti.AppendFnVar(varname)
 	}
 
@@ -404,7 +404,7 @@ func newResultObject(t reflect.Type, opts resultOptions) (resultObject, error) {
 }
 
 func (ro resultObject) Extract(cw containerWriter, decorated bool, v reflect.Value) {
-	varname := Anti.TypeSeqname(ro.Type)
+	varname := Anti.Seqname(ro.Type)
 	Anti.AppendFnVar(varname)
 
 	for _, f := range ro.Fields {
@@ -545,7 +545,7 @@ func newResultGrouped(f reflect.StructField) (resultGrouped, error) {
 }
 
 func (rt resultGrouped) Extract(cw containerWriter, decorated bool, v reflect.Value) {
-	seqname := Anti.GroupSeqname(rt.Type, rt.Group)
+	seqname := Anti.GrouppedSeqname(rt.Group, rt.Type)
 	Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", seqname, Anti.FnVars()[0], rt.ParamFieldName))
 	Anti.AddFlatten(seqname, rt.Flatten)
 
