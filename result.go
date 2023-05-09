@@ -545,9 +545,15 @@ func newResultGrouped(f reflect.StructField) (resultGrouped, error) {
 }
 
 func (rt resultGrouped) Extract(cw containerWriter, decorated bool, v reflect.Value) {
-	seqname := Anti.GrouppedSeqname(rt.Group, rt.Type)
-	Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", seqname, Anti.FnVars()[0], rt.ParamFieldName))
-	Anti.AddFlatten(seqname, rt.Flatten)
+	fnVars := Anti.FnVars()
+	if len(fnVars) > 0 {
+		seqname := Anti.GrouppedSeqname(rt.Group, rt.Type)
+		Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", seqname, fnVars[0], rt.ParamFieldName))
+		Anti.AddFlatten(seqname, rt.Flatten)
+	} else {
+		seqname := Anti.GrouppedSeqname(rt.Group, rt.Type)
+		Anti.AppendFnVar(seqname)
+	}
 
 	// Decorated values are always flattened.
 	if !decorated && !rt.Flatten {

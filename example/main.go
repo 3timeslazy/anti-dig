@@ -26,7 +26,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = container.Provide(handlerv0.NewHandlerV0)
+	err = container.Provide(handlerv0.NewHandlerV0, dig.Group("http_handlers"))
 	if err != nil {
 		panic(err)
 	}

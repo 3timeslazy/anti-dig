@@ -1,18 +1,18 @@
 package main
 
 import (
-	"github.com/3timeslazy/anti-dig/example/handlers"
-	grpcserver "github.com/3timeslazy/anti-dig/example/grpc/server"
-	"github.com/3timeslazy/anti-dig/example/cron"
-	"github.com/3timeslazy/anti-dig/example/observability"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
+	"github.com/3timeslazy/anti-dig/example/handlers"
+	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
+	grpcserver "github.com/3timeslazy/anti-dig/example/grpc/server"
+	"github.com/3timeslazy/anti-dig/example/consumer/queue"
 	"github.com/3timeslazy/anti-dig/example/config"
+	"github.com/3timeslazy/anti-dig/example/cron"
 	"github.com/3timeslazy/anti-dig/example/handlers/flatten"
 	"github.com/3timeslazy/anti-dig/example/http/server"
-	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
 	"github.com/3timeslazy/anti-dig/example/db"
-	"github.com/3timeslazy/anti-dig/example/consumer/queue"
 	"github.com/3timeslazy/anti-dig/example/consumer"
+	"github.com/3timeslazy/anti-dig/example/observability"
 )
 
 func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
@@ -33,28 +33,27 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 
 	var12_0 := flatten.NewListOfHandlers(var10_0.Metrics)
 
-	var14_0, err := handlerv0.NewHandlerV0(var2)
+	var13_httpHandlers_1, err := handlerv0.NewHandlerV0(var2)
 	if err != nil {
 		return nil, nil, nil
 	}
-
-	var15_httpHandlers := []handlers.Handler{
-		var14_0.Handler,
+	var14_httpHandlers := []handlers.Handler{
+		var13_httpHandlers_1,
 	}
-	var15_httpHandlers = append(var15_httpHandlers, var12_0.Handlers...)
-	var16 := server.ServerParams{
+	var14_httpHandlers = append(var14_httpHandlers, var12_0.Handlers...)
+	var15 := server.ServerParams{
 		Config:		var7,
-		Handlers:	var15_httpHandlers,
+		Handlers:	var14_httpHandlers,
 	}
-	var8 := server.NewServer(var16)
-	var18_0 := handlerv1.NewHandlerV1()
+	var8 := server.NewServer(var15)
+	var17_0 := handlerv1.NewHandlerV1()
 
-	var20_grpcHandlers := []handlers.Handler{
-		var18_0.Handler,
+	var19_grpcHandlers := []handlers.Handler{
+		var17_0.Handler,
 	}
-	var21 := grpcserver.ServerParams{
-		Handlers: var20_grpcHandlers,
+	var20 := grpcserver.ServerParams{
+		Handlers: var19_grpcHandlers,
 	}
-	var17 := grpcserver.NewServer(var21)
-	return var1, var8, var17
+	var16 := grpcserver.NewServer(var20)
+	return var1, var8, var16
 }
