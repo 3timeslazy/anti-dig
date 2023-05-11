@@ -26,7 +26,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"os"
+	"io"
 	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
@@ -34,11 +34,13 @@ import (
 
 type Optimiser struct {
 	selRepls map[string]string
+	output   io.Writer
 }
 
-func New() *Optimiser {
+func New(output io.Writer) *Optimiser {
 	return &Optimiser{
 		selRepls: map[string]string{},
+		output:   output,
 	}
 }
 
@@ -79,7 +81,7 @@ func (opt *Optimiser) PrintOptimised(generated string) error {
 		return true
 	})
 
-	err = printer.Fprint(os.Stdout, fset, generatedFile)
+	err = printer.Fprint(opt.output, fset, generatedFile)
 	if err != nil {
 		return err
 	}

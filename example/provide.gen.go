@@ -1,35 +1,35 @@
 package main
 
 import (
-	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
+	"github.com/3timeslazy/anti-dig/example/consumer/queue"
 	"github.com/3timeslazy/anti-dig/example/handlers"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
 	grpcserver "github.com/3timeslazy/anti-dig/example/grpc/server"
-	"github.com/3timeslazy/anti-dig/example/consumer/queue"
 	"github.com/3timeslazy/anti-dig/example/config"
+	"github.com/3timeslazy/anti-dig/example/consumer"
 	"github.com/3timeslazy/anti-dig/example/cron"
+	"github.com/3timeslazy/anti-dig/example/observability"
 	"github.com/3timeslazy/anti-dig/example/handlers/flatten"
+	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
 	"github.com/3timeslazy/anti-dig/example/http/server"
 	"github.com/3timeslazy/anti-dig/example/db"
-	"github.com/3timeslazy/anti-dig/example/consumer"
-	"github.com/3timeslazy/anti-dig/example/observability"
 )
 
 func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
-	var2, err := db.NewDB()
+	var3 := config.NewConfig()
+	var2, err := db.NewDB(var3)
 	if err != nil {
 		return nil, nil, nil
 	}
-	var4_queue1 := queue.New1()
-	var5_queue2 := queue.New2()
-	var6 := consumer.ConsumerParams{
-		Queue1:	var4_queue1,
-		Queue2:	var5_queue2,
+	var5_queue1 := queue.New1()
+	var6_queue2 := queue.New2()
+	var7 := consumer.ConsumerParams{
+		Queue1:	var5_queue1,
+		Queue2:	var6_queue2,
 	}
-	var3 := consumer.New(var6)
-	var7 := config.NewConfig()
-	var1 := cron.NewCron(var2, var3, var7)
-	var10_0 := observability.NewObservability(var7)
+	var4 := consumer.New(var7)
+	var1 := cron.NewCron(var2, var4, var3)
+	var10_0 := observability.NewObservability(var3)
 
 	var12_0 := flatten.NewListOfHandlers(var10_0.Metrics)
 
@@ -42,7 +42,7 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 	}
 	var14_httpHandlers = append(var14_httpHandlers, var12_0.Handlers...)
 	var15 := server.ServerParams{
-		Config:		var7,
+		Config:		var3,
 		Handlers:	var14_httpHandlers,
 	}
 	var8 := server.NewServer(var15)

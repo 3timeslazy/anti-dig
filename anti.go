@@ -60,26 +60,28 @@ type typeAlias struct {
 	Type  reflect.Type
 }
 
-var Anti = AntiDig{
-	output: os.Stdout,
+func NewAnti(output io.Writer) *AntiDig {
+	return &AntiDig{
+		callstack:    list.New(),
+		fnsArgs:      map[string][]string{},
+		fnsVars:      map[string][]string{},
+		fnsSuffixies: map[string][]string{},
 
-	callstack:    list.New(),
-	fnsArgs:      map[string][]string{},
-	fnsVars:      map[string][]string{},
-	fnsSuffixies: map[string][]string{},
+		flattenVars: map[string]bool{},
 
-	flattenVars: map[string]bool{},
+		varnames:      map[typeAlias]string{},
+		groupVarnames: map[typeAlias]string{},
+		varnameSeq:    0,
+		seqnames:      map[typeAlias]int{},
 
-	varnames:      map[typeAlias]string{},
-	groupVarnames: map[typeAlias]string{},
-	varnameSeq:    0,
-	seqnames:      map[typeAlias]int{},
+		pkgAlias:      map[string]string{},
+		allPkgAliases: map[string]bool{},
 
-	pkgAlias:      map[string]string{},
-	allPkgAliases: map[string]bool{},
-
-	optimiser: optimiser.New(),
+		optimiser: optimiser.New(output),
+	}
 }
+
+var Anti = NewAnti(os.Stdout)
 
 func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 	decls := []string{
