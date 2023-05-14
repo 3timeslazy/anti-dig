@@ -45,7 +45,7 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 		Config:   config,
 		Handlers: var14_httpHandlers,
 	}
-	var8 := server.NewServer(var15)
+	server := server.NewServer(var15)
 	handlerV1 := handlerv1.NewHandlerV1()
 
 	var19_grpcHandlers := []handlers.Handler{
@@ -54,6 +54,6 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 	var20 := grpcserver.ServerParams{
 		Handlers: var19_grpcHandlers,
 	}
-	var16 := grpcserver.NewServer(var20)
-	return cron, var8, var16
+	grpcserverServer := grpcserver.NewServer(var20)
+	return cron, server, grpcserverServer
 }

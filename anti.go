@@ -307,6 +307,11 @@ func (anti *AntiDig) SetErrorExpr(fntype reflect.Type) {
 	errExpr = []string{"if err != nil {", errStmt, "}"}
 }
 
-func (anti *AntiDig) AddVarType(varname, typ string) {
-	anti.varTypes[varname] = typ
+func (anti *AntiDig) AddVarType(varname string, typ reflect.Type) {
+	typestr := typ.Name()
+	if typestr == "" {
+		typestr = typ.Elem().Name()
+	}
+
+	anti.varTypes[varname] = typestr
 }
