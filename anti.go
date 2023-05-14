@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/3timeslazy/anti-dig/internal/optimiser"
-
 	"github.com/iancoleman/strcase"
 )
 
@@ -52,7 +51,7 @@ type AntiDig struct {
 	pkgAlias      map[string]string
 	allPkgAliases map[string]bool
 
-	optimiser *optimiser.Optimiser
+	varTypes map[string]string
 }
 
 type typeAlias struct {
@@ -62,6 +61,7 @@ type typeAlias struct {
 
 func NewAnti(output io.Writer) *AntiDig {
 	return &AntiDig{
+		output:       output,
 		callstack:    list.New(),
 		fnsArgs:      map[string][]string{},
 		fnsVars:      map[string][]string{},
@@ -77,7 +77,7 @@ func NewAnti(output io.Writer) *AntiDig {
 		pkgAlias:      map[string]string{},
 		allPkgAliases: map[string]bool{},
 
-		optimiser: optimiser.New(output),
+		varTypes: map[string]string{},
 	}
 }
 
@@ -90,7 +90,11 @@ func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 		anti.generateFunc(invokedType),
 	}
 
-	return anti.optimiser.PrintOptimised(strings.Join(decls, "\n"))
+	opt := optimiser.Optimiser{
+		Output:   anti.output,
+		VarTypes: anti.varTypes,
+	}
+	return opt.PrintOptimised(strings.Join(decls, "\n"))
 }
 
 func (anti *AntiDig) generateFunc(invokedType reflect.Type) string {
@@ -301,4 +305,8 @@ func (anti *AntiDig) SetErrorExpr(fntype reflect.Type) {
 	}
 	errStmt = strings.TrimRight(errStmt, ", ")
 	errExpr = []string{"if err != nil {", errStmt, "}"}
+}
+
+func (anti *AntiDig) AddVarType(varname, typ string) {
+	anti.varTypes[varname] = typ
 }

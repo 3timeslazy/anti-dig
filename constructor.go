@@ -182,6 +182,8 @@ func (n *constructorNode) Call(c containerStore) (err error) {
 		strings.Join(fnArgs, ", "),
 	))
 
+	Anti.AddVarType(fnVars[0], n.resultList.ctype.Out(0).Name())
+
 	for _, fnVar := range fnVars {
 		if fnVar == "err" {
 			Anti.Print(errExpr...)
