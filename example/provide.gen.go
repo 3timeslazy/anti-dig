@@ -23,11 +23,11 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 	}
 	queue1 := queue.New1()
 	queue := queue.New2()
-	var7 := consumer.ConsumerParams{
+	consumerParams := consumer.ConsumerParams{
 		Queue1: queue1,
 		Queue2: queue,
 	}
-	consumer := consumer.New(var7)
+	consumer := consumer.New(consumerParams)
 	cron := cron.NewCron(db, consumer, config)
 	observability := observability.NewObservability(config)
 
@@ -37,23 +37,23 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 	if err != nil {
 		return nil, nil, nil
 	}
-	var14_httpHandlers := []handlers.Handler{
+	httpHandlers := []handlers.Handler{
 		handler,
 	}
-	var14_httpHandlers = append(var14_httpHandlers, listOfHandlers.Handlers...)
-	var15 := server.ServerParams{
+	httpHandlers = append(httpHandlers, listOfHandlers.Handlers...)
+	serverParams := server.ServerParams{
 		Config:   config,
-		Handlers: var14_httpHandlers,
+		Handlers: httpHandlers,
 	}
-	server := server.NewServer(var15)
+	server := server.NewServer(serverParams)
 	handlerV1 := handlerv1.NewHandlerV1()
 
-	var19_grpcHandlers := []handlers.Handler{
+	grpcHandlers := []handlers.Handler{
 		handlerV1.Handler,
 	}
-	var20 := grpcserver.ServerParams{
-		Handlers: var19_grpcHandlers,
+	grpcserverServerParams := grpcserver.ServerParams{
+		Handlers: grpcHandlers,
 	}
-	grpcserverServer := grpcserver.NewServer(var20)
+	grpcserverServer := grpcserver.NewServer(grpcserverServerParams)
 	return cron, server, grpcserverServer
 }

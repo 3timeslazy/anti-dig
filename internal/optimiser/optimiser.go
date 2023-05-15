@@ -64,6 +64,9 @@ func renameVariables(file *ast.File, fset *token.FileSet, varTypes map[string]st
 	replacements := map[string]string{}
 	imports := map[string]token.Pos{}
 
+	// During the first walk, we look for the last position
+	// at which each imported package was used. Later on, this will
+	// help us decide whether or not it's possible to shadow an import
 	astutil.Apply(file, nil, func(c *astutil.Cursor) bool {
 		node := c.Node()
 
@@ -95,28 +98,8 @@ func renameVariables(file *ast.File, fset *token.FileSet, varTypes map[string]st
 			return true
 		}
 
-		// TODO: later
-		vtype := varTypes[ident.Name]
-		if vtype == "" {
-			return true
-		}
-
-		possibleNames := []string{vtype}
-
-		assign, ok := ident.Obj.Decl.(*ast.AssignStmt)
-		if ok {
-			call := assign.Rhs[0].(*ast.CallExpr)
-			fun := call.Fun.(*ast.SelectorExpr)
-			pkg := fun.X.(*ast.Ident)
-
-			fnName := fun.Sel.Name
-			fnName, _ = strings.CutSuffix(fnName, "Provider")
-			fnName, _ = strings.CutPrefix(fnName, "New")
-
-			possibleNames = append(possibleNames, pkg.Name+"_"+vtype)  // pkgType
-			possibleNames = append(possibleNames, fnName)              // funcName
-			possibleNames = append(possibleNames, pkg.Name+"_"+fnName) // pkgFuncName
-		}
+		possibleNames := callExprNames(ident, varTypes)
+		possibleNames = append(possibleNames, compositLitNames(ident)...)
 
 		for i, name := range possibleNames {
 			name = strcase.ToLowerCamel(name)
@@ -155,31 +138,94 @@ func renameVariables(file *ast.File, fset *token.FileSet, varTypes map[string]st
 	})
 
 	astutil.Apply(file, nil, func(c *astutil.Cursor) bool {
-		switch ident := c.Node().(type) {
+		switch node := c.Node().(type) {
 		case *ast.Ident:
-			if ident.Obj == nil || ident.Obj.Kind != ast.Var {
-				break
-			}
+			replaceIdent(node, replacements)
 
-			replaceIdent(ident, replacements)
-		}
-
-		switch comp := c.Node().(type) {
 		case *ast.CompositeLit:
-			for _, elt := range comp.Elts {
+			for _, elt := range node.Elts {
 				replaceIdent(elt, replacements)
 			}
-		}
 
-		switch call := c.Node().(type) {
 		case *ast.CallExpr:
-			for _, arg := range call.Args {
+			for _, arg := range node.Args {
 				replaceIdent(arg, replacements)
 			}
 		}
 
 		return true
 	})
+}
+
+func compositLitNames(ident *ast.Ident) []string {
+	assign, ok := ident.Obj.Decl.(*ast.AssignStmt)
+	if !ok {
+		return nil
+	}
+	rhs, ok := assign.Rhs[0].(*ast.CompositeLit)
+	if !ok {
+		return nil
+	}
+
+	names := []string{}
+
+	switch rhs.Type.(type) {
+	case *ast.SelectorExpr:
+		sel := rhs.Type.(*ast.SelectorExpr)
+		typ := sel.Sel.Name
+		pkg := sel.X.(*ast.Ident).Name
+
+		names = append(names, typ)
+		names = append(names, pkg+"_"+typ)
+
+	case *ast.ArrayType:
+		arr := rhs.Type.(*ast.ArrayType)
+		elem := arr.Elt.(*ast.SelectorExpr)
+		elemType := elem.Sel.Name
+		pkg := elem.X.(*ast.Ident).Name
+
+		// Most likely an array is created for a specific dig group,
+		// therefore the ident contains the group's name, which might be
+		// a good variable name
+		if i := strings.Index(ident.Name, "_"); i != -1 {
+			names = append(names, ident.Name[i+1:])
+		}
+
+		names = append(names, "listOf_"+elemType)
+		names = append(names, pkg+"_"+elemType+"_list")
+	}
+
+	return names
+}
+
+func callExprNames(ident *ast.Ident, varTypes map[string]string) []string {
+	assign, ok := ident.Obj.Decl.(*ast.AssignStmt)
+	if !ok {
+		return nil
+	}
+	call, ok := assign.Rhs[0].(*ast.CallExpr)
+	if !ok {
+		return nil
+	}
+
+	varType := varTypes[ident.Name]
+	if ident.Name == "err" {
+		return nil
+	}
+
+	fn := call.Fun.(*ast.SelectorExpr)
+	pkg := fn.X.(*ast.Ident).Name
+	fnName := fn.Sel.Name
+
+	fnName, _ = strings.CutSuffix(fnName, "Provider")
+	fnName, _ = strings.CutPrefix(fnName, "New")
+
+	names := []string{varType}
+	names = append(names, pkg+"_"+varType)
+	names = append(names, fnName)
+	names = append(names, pkg+"_"+fnName)
+
+	return names
 }
 
 func replaceIdent(node ast.Node, replacements map[string]string) {
