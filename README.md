@@ -1,12 +1,12 @@
 # :carpentry_saw: anti-dig
 
-A 100% compatible drop-in replacement of `go.uber.org/dig`
-
-**anti-dig** does the same thing as dig, but instead of calling providers and passing them on to other providers in runtime, it generates a file with the code calling your providers in the correct order
+**anti-dig** is a drop-in replacement for `go.uber.org/dig`, providing 100% compatibility. While it performs the same function as dig, it introduces a new approach. Instead of executing providers and passing them to other providers at runtime, it generates a file with the code calling your providers in the correct order.
 
 # Usage
 
-Replace `go.uber.org/dig` with `github.com/3timeslazy/anti-dig`
+To use **anti-dig**, follow these steps:
+
+1. Replace `go.uber.org/dig` with `github.com/3timeslazy/anti-dig`
 ```go
 package main
 
@@ -24,25 +24,28 @@ func main() {
 }
 ```
 
-and run your code. It'll generate a new file with all dependencies in one file
+2. Run your code. It will generate a new file containing all the dependencies in a single file.
 
 # Example
-You can find the code [here](https://github.com/3timeslazy/anti-dig/blob/main/example/main.go)
+For an example illustrating the usage of anti-dig, refer to the code provided [here](https://github.com/3timeslazy/anti-dig/blob/main/example/main.go)
 
-The code below 
+The original code:
 ```go
 package main
 
 import (
 	dig "github.com/3timeslazy/anti-dig"
 	"github.com/3timeslazy/anti-dig/example/config"
+	"github.com/3timeslazy/anti-dig/example/consumer"
+	"github.com/3timeslazy/anti-dig/example/consumer/queue"
 	"github.com/3timeslazy/anti-dig/example/cron"
 	"github.com/3timeslazy/anti-dig/example/db"
+	grpcserv "github.com/3timeslazy/anti-dig/example/grpc/server"
 	"github.com/3timeslazy/anti-dig/example/handlers/flatten"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
+	httpserv "github.com/3timeslazy/anti-dig/example/http/server"
 	"github.com/3timeslazy/anti-dig/example/observability"
-	"github.com/3timeslazy/anti-dig/example/server"
 )
 
 func main() {
@@ -56,7 +59,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = container.Provide(handlerv0.NewHandlerV0)
+	err = container.Provide(handlerv0.NewHandlerV0, dig.Group("http_handlers"))
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +79,23 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = container.Provide(server.NewServer)
+	err = container.Provide(httpserv.NewServer)
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(grpcserv.NewServer)
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(consumer.New)
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(queue.New1, dig.Name("queue_1"))
+	if err != nil {
+		panic(err)
+	}
+	err = container.Provide(queue.New2, dig.Name("queue_2"))
 	if err != nil {
 		panic(err)
 	}
@@ -85,60 +104,78 @@ func main() {
 		panic(err)
 	}
 }
-
-func Run(cron cron.Cron, server *server.Server) {
-	go cron.Start()
-	go server.Serve()
-}
 ```
 
-will generate the following
+Will be transformed into:
 ```go
 package main
 
 import (
-        db "github.com/3timeslazy/anti-dig/example/db"
-        config "github.com/3timeslazy/anti-dig/example/config"
-        cron "github.com/3timeslazy/anti-dig/example/cron"
-        handlers "github.com/3timeslazy/anti-dig/example/handlers"
-        server "github.com/3timeslazy/anti-dig/example/http/server"
-        observability "github.com/3timeslazy/anti-dig/example/observability"
-        flatten "github.com/3timeslazy/anti-dig/example/handlers/flatten"
-        handlerv0 "github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
-        handlerv1 "github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
+	"github.com/3timeslazy/anti-dig/example/config"
+	"github.com/3timeslazy/anti-dig/example/consumer"
+	"github.com/3timeslazy/anti-dig/example/consumer/queue"
+	"github.com/3timeslazy/anti-dig/example/cron"
+	"github.com/3timeslazy/anti-dig/example/db"
+	grpcserver "github.com/3timeslazy/anti-dig/example/grpc/server"
+	"github.com/3timeslazy/anti-dig/example/handlers"
+	"github.com/3timeslazy/anti-dig/example/handlers/flatten"
+	"github.com/3timeslazy/anti-dig/example/handlers/handlerv0"
+	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
+	"github.com/3timeslazy/anti-dig/example/http/server"
+	"github.com/3timeslazy/anti-dig/example/observability"
 )
 
-func main() {
-	var2, err := db.NewDB()
+func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
+	config := config.NewConfig()
+	db, err := db.NewDB(config)
 	if err != nil {
-		panic(err)
+		return nil, nil, nil
 	}
-	var3 := config.NewConfig()
-	var1 := cron.NewCron(var2, var3)
-	var6_0 := observability.NewObservability(var3)
+	queue1 := queue.New1()
+	queue := queue.New2()
+	consumerParams := consumer.ConsumerParams{
+		Queue1: queue1,
+		Queue2: queue,
+	}
+	consumer := consumer.New(consumerParams)
+	cron := cron.NewCron(db, consumer, config)
+	observability := observability.NewObservability(config)
 
-	var8_0 := flatten.NewListOfHandlers(var6_0.Metrics)
+	listOfHandlers := flatten.NewListOfHandlers(observability.Metrics)
 
-	var10_0, err := handlerv0.NewHandlerV0(var2)
+	handler, err := handlerv0.NewHandlerV0(db)
 	if err != nil {
-		panic(err)
+		return nil, nil, nil
 	}
+	httpHandlers := []handlers.Handler{
+		handler,
+	}
+	httpHandlers = append(httpHandlers, listOfHandlers.Handlers...)
+	serverParams := server.ServerParams{
+		Config:   config,
+		Handlers: httpHandlers,
+	}
+	server := server.NewServer(serverParams)
+	handlerV1 := handlerv1.NewHandlerV1()
 
-	var10_1 := handlerv1.NewHandlerV1()
-
-	var11 := []handlers.Handler{
-		var10_0.Handler,
-		var10_1.Handler,
+	grpcHandlers := []handlers.Handler{
+		handlerV1.Handler,
 	}
-	var11 = append(var11, var8_0.Handlers...)
-	var12 := server.ServerParams{
-		Handlers: var11,
+	grpcserverServerParams := grpcserver.ServerParams{
+		Handlers: grpcHandlers,
 	}
-	var4 := server.NewServer(var12)
-	FIXME(var1, var4)
+	grpcserverServer := grpcserver.NewServer(grpcserverServerParams)
+	return cron, server, grpcserverServer
 }
 ```
 
-After that, simply replace the `main()` function in the original file with the generated function, replace `FIXME()` with your function, remove `go.uber.org/dig` from dependencies and you're all set! You can now run the generated code, where you can <ins>clearly see all the dependencies between types<ins>.
+In the generated code, all the dependencies will be clearly defined and ordered according to their relationships.
 
-But before that, I'd suggest renaming the variables and maybe grouping the code better. ChatGPT it's pretty good at this, but I wouldn't recommend using it with proprietary code
+Before running the generated code, make sure to perform the following steps:
+1. Fix any error handling in the generated file, if required
+2. Replace the `Invoke(Run)` statement in the original file with `Run(Provide())`
+3. Remove the go.uber.org/dig dependency from your project.
+
+Following these steps will allow you to execute the generated code, providing a clear view of the dependencies between types.
+
+It is recommended to rename variables and organize the code in a way that suits your project's conventions and readability. Although ChatGPT can assist with this task, I wouldn't recommend using it with proprietary code
