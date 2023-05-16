@@ -425,7 +425,10 @@ func (po paramObject) Build(c containerStore) (reflect.Value, error) {
 		dest.Field(f.FieldIndex).Set(v)
 	}
 
-	varname := Anti.Varname(po.Type)
+	// Use seqname instead of varname here because
+	// dig builds a new param object for each provider call
+	// istead of reusing it
+	varname := Anti.Seqname(po.Type)
 	Anti.AppendFnArg(varname)
 
 	Anti.Print(fmt.Sprintf(
