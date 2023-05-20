@@ -17,12 +17,4 @@ type Observability struct {
 
 type Metrics struct{}
 
-func NewMetrics() Metrics {
-	return Metrics{}
-}
-
 type Profiler struct{}
-
-func NewProfiler() Profiler {
-	return Profiler{}
-}

@@ -248,6 +248,8 @@ func (resultList) Extract(containerWriter, bool, reflect.Value) {
 	digerror.BugPanicf("resultList.Extract() must never be called")
 }
 
+var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
+
 func (rl resultList) ExtractList(cw containerWriter, decorated bool, values []reflect.Value) error {
 	for i, v := range values {
 		if resultIdx := rl.resultIndexes[i]; resultIdx >= 0 {
