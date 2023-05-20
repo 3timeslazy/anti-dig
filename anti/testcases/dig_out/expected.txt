@@ -1,0 +1,13 @@
+package main
+
+import (
+	metrics "github.com/3timeslazy/anti-dig/anti/testcases/dig_out/metrics"
+	observability "github.com/3timeslazy/anti-dig/anti/testcases/dig_out/observability"
+)
+
+func Provide() (metrics.Metrics) {
+	var2_0 := observability.New()
+	var1 := var2_0.Metrics
+	var3 := var2_0.Profiler
+	return var1
+}

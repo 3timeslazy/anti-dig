@@ -1,0 +1,12 @@
+package main
+
+import (
+	grpcserver "github.com/3timeslazy/anti-dig/anti/testcases/same_pkg_name/grpc/server"
+	server "github.com/3timeslazy/anti-dig/anti/testcases/same_pkg_name/http/server"
+)
+
+func Provide() (server.Server, grpcserver.Server) {
+	var1 := server.New()
+	var2 := grpcserver.New()
+	return var1, var2
+}

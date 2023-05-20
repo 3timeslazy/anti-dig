@@ -1,0 +1,30 @@
+package main
+
+import (
+	handlers "github.com/3timeslazy/anti-dig/anti/testcases/dig_group/handlers"
+	server "github.com/3timeslazy/anti-dig/anti/testcases/dig_group/server"
+)
+
+func Provide() (server.Server) {
+	var2_0 := handlers.NewListV1()
+	var3_handlersV1_0 := var2_0.Handlers
+	var4_0 := handlers.NewV1()
+	var3_handlersV1_1 := var4_0.Handler
+	var5_handlersV1 := []handlers.Handler{
+		var3_handlersV1_1,
+	}
+	var5_handlersV1 = append(var5_handlersV1, var3_handlersV1_0...)
+	var6_0 := handlers.NewListV2()
+	var7_handlersV2_0 := var6_0.Handlers
+	var7_handlersV2_1 := handlers.NewV2()
+	var8_handlersV2 := []handlers.Handler{
+		var7_handlersV2_1,
+	}
+	var8_handlersV2 = append(var8_handlersV2, var7_handlersV2_0...)
+	var9_0 := server.ServerParams{
+		HandlersV1: var5_handlersV1,
+		HandlersV2: var8_handlersV2,
+	}
+	var1 := server.New(var9_0)
+	return var1
+}
