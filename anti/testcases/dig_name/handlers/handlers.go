@@ -7,7 +7,7 @@ type Handler struct{}
 type HandlersIn struct {
 	dig.In
 	H1 Handler `name:"handler_v1"`
-	// H2 Handler `name:"handler_v2"`
+	H2 Handler `name:"handler_v2"`
 	H3 Handler `name:"handler_v3"`
 }
 

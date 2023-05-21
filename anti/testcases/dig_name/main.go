@@ -10,7 +10,7 @@ func main() {
 
 	container := dig.New()
 	_ = container.Provide(handlers.New, dig.Name("handler_v1"))
-	// _ = container.Provide(handlers.New, dig.Name("handler_v2"))
+	_ = container.Provide(handlers.New, dig.Name("handler_v2"))
 	_ = container.Provide(handlers.NewV3, dig.Name("handler_v3"))
 	_ = container.Provide(handlers.NewServer)
 

@@ -145,16 +145,14 @@ func (anti *AntiDig) returnedTypes(invokedType reflect.Type) string {
 }
 
 func (anti *AntiDig) generateImports() string {
-	// out := "import (\n"
-	// out = ""
-
 	pkgs := []string{}
 
 	for pkg, alias := range anti.pkgAlias {
-		// out += fmt.Sprintf("\t%s \"%s\"\n", alias, pkg)
 		pkgs = append(pkgs, fmt.Sprintf("\t%s \"%s\"", alias, pkg))
 	}
 
+	// Sort the imports so that their order is always
+	// the same and there are no fluctuations in the tests associated with this
 	slices.SortFunc(pkgs, func(a, b string) bool {
 		return a < b
 	})
@@ -170,8 +168,15 @@ func (anti *AntiDig) PushFnCall(fnName string) {
 }
 
 func (anti *AntiDig) PopFnCall() {
+	anti.cleanupFn(anti.currFn())
 	elem := anti.callstack.Back()
 	anti.callstack.Remove(elem)
+}
+
+func (anti *AntiDig) cleanupFn(fnName string) {
+	delete(anti.fnsArgs, fnName)
+	delete(anti.fnsVars, fnName)
+	delete(anti.fnsSuffixies, fnName)
 }
 
 func (anti *AntiDig) AppendFnArg(arg string) {

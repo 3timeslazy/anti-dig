@@ -6,11 +6,13 @@ import (
 
 func Provide() (handlers.Server) {
 	var2_handlerV1 := handlers.New()
-	var3_handlerV3 := handlers.NewV3()
-	var4_0 := handlers.HandlersIn{
+	var3_handlerV2 := handlers.New()
+	var4_handlerV3 := handlers.NewV3()
+	var5_0 := handlers.HandlersIn{
 		H1: var2_handlerV1,
-		H3: var3_handlerV3,
+		H2: var3_handlerV2,
+		H3: var4_handlerV3,
 	}
-	var1 := handlers.NewServer(var4_0)
+	var1 := handlers.NewServer(var5_0)
 	return var1
 }
