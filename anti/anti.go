@@ -27,7 +27,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/3timeslazy/anti-dig/internal/optimiser"
+	"github.com/3timeslazy/anti-dig/anti/optimiser"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/slices"
 )
