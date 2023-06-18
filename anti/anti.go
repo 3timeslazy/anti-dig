@@ -36,6 +36,7 @@ type AntiDig struct {
 	output   io.Writer
 	exprs    []string
 	optimise bool
+	rename   bool
 
 	callstack    *list.List
 	fnsArgs      map[string][]string
@@ -87,6 +88,11 @@ func (anti *AntiDig) Optimise(enable bool) *AntiDig {
 	return anti
 }
 
+func (anti *AntiDig) RenamePrivate(enable bool) *AntiDig {
+	anti.rename = enable
+	return anti
+}
+
 func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 	generated := strings.Join([]string{
 		"package main\n",
@@ -102,6 +108,7 @@ func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 	opt := optimiser.Optimiser{
 		Output:   anti.output,
 		VarTypes: anti.varTypes,
+		Rename:   anti.rename,
 	}
 	return opt.PrintOptimised(generated)
 }
