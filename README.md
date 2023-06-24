@@ -1,40 +1,40 @@
 # :carpentry_saw: anti-dig
 
-**anti-dig** is a drop-in replacement for `go.uber.org/dig`, providing 100% compatibility. While it performs the same function as dig, it introduces a new approach. Instead of executing providers and passing them to other providers at runtime, it generates a file with the code calling your providers in the correct order.
+An anti-dependency-injection drop-in replacement toolkit for `go.uber.org/dig`.
 
-# Usage
+## Why?
 
-To use **anti-dig**, follow these steps:
+I have worked in many companies. In every one of them, I've seen someone using `go.uber.org/dig`. And in each case, after a while the team wanted to get rid of it, but it didn't always work because it always took a lot of time and effort. Faced with this problem again, I decided to write a tool to help others get rid of the library.
 
-1. Replace `go.uber.org/dig` with `github.com/3timeslazy/anti-dig`
+## Table of Contents
+
+* [Guide](#guide)
+* [Example](#example) 
+
+## Guide
+
+To use **anti-dig**, follow the the steps:
+
+1. Replace `go.uber.org/dig` with `github.com/3timeslazy/anti-dig` everywhere in your code
+
+
 ```go
-package main
-
 import (
-  // Replace "go.uber.org/dig" here
-  dig "github.com/3timeslazy/anti-dig"
+    dig "github.com/3timeslazy/anti-dig" // instead of "go.uber.org/dig"
 )
-
-func main() {
-  container := dig.New()
-  
-  // dig.Provide() calls here
-  
-  container.Invoke(run)
-}
 ```
 
-2. Run your code. It will generate a new file containing all the dependencies in a single file.
+2. Download the package by running `go mod tidy`
 
-# Example
-For an example illustrating the usage of anti-dig, refer to the code provided [here](https://github.com/3timeslazy/anti-dig/blob/main/example/main.go)
+3. Run your `main()` function. It will generate a new file with explicit initialization of your dependencies
 
-The original code:
+## Example
+
+Suppose we have a `main()` function with several providers passed to dig
 ```go
 package main
 
 import (
-	dig "github.com/3timeslazy/anti-dig"
 	"github.com/3timeslazy/anti-dig/example/config"
 	"github.com/3timeslazy/anti-dig/example/consumer"
 	"github.com/3timeslazy/anti-dig/example/consumer/queue"
@@ -46,6 +46,8 @@ import (
 	"github.com/3timeslazy/anti-dig/example/handlers/handlerv1"
 	httpserv "github.com/3timeslazy/anti-dig/example/http/server"
 	"github.com/3timeslazy/anti-dig/example/observability"
+
+ 	dig "github.com/3timeslazy/anti-dig" // "go.uber.org/dig"
 )
 
 func main() {
@@ -106,7 +108,7 @@ func main() {
 }
 ```
 
-Will be transformed into:
+The code above will generate the following:
 ```go
 package main
 
@@ -169,13 +171,9 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 }
 ```
 
-In the generated code, all the dependencies will be clearly defined and ordered according to their relationships.
-
 Before running the generated code, make sure to perform the following steps:
 1. Fix any error handling in the generated file, if required
 2. Replace the `Invoke(Run)` statement in the original file with `Run(Provide())`
-3. Remove the go.uber.org/dig dependency from your project.
+3. Remove go.uber.org/dig from your project 🥳🥳🥳 
 
-Following these steps will allow you to execute the generated code, providing a clear view of the dependencies between types.
-
-It is recommended to rename variables and organize the code in a way that suits your project's conventions and readability. Although ChatGPT can assist with this task, I wouldn't recommend using it with proprietary code
+Following these steps will allow you to execute the generated code, providing a clear view of your dependencies
