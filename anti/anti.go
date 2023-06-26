@@ -23,8 +23,8 @@ package anti
 import (
 	"container/list"
 	"fmt"
+	"go/format"
 	"go/parser"
-	"go/printer"
 	"go/token"
 	"io"
 	"reflect"
@@ -124,7 +124,7 @@ func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 		}
 	}
 
-	return printer.Fprint(anti.output, fset, generatedFile)
+	return format.Node(anti.output, fset, generatedFile)
 }
 
 func (anti *AntiDig) generateFunc(invokedType reflect.Type) string {

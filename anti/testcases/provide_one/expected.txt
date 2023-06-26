@@ -4,7 +4,7 @@ import (
 	config "github.com/3timeslazy/anti-dig/anti/testcases/provide_one/config"
 )
 
-func Provide() (config.Config) {
+func Provide() config.Config {
 	var1 := config.New()
 	return var1
 }
