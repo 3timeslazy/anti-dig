@@ -9,7 +9,8 @@ I have worked in many companies. In every one of them, I've seen someone using `
 ## Table of Contents
 
 * [Guide](#guide)
-* [Example](#example) 
+* [Example](#example)
+* [Configuration](#configuration)
 
 ## Guide
 
@@ -177,3 +178,40 @@ Before running the generated code, make sure to perform the following steps:
 3. Remove go.uber.org/dig from your project 🥳🥳🥳 
 
 Following these steps will allow you to execute the generated code, providing a clear view of your dependencies
+
+## Configuration
+
+**anti-dig** has two configuration options.
+
+### Optimise
+
+This option is enabled by default. 
+
+If true, then anti-dig will generate code with some 'optimisations' such as human-readable variables, deleted unused variables, etc.
+
+```go
+package main
+
+import dig "github.com/3timeslazy/anti-dig"
+
+func main() {
+	dig.Anti.Optimise(true)
+}
+```
+
+### Rename
+
+This option is disabled by default. 
+
+It is often the case that functions passed to dig as a provider are private functions not visible in the main package. In this case, you can enable this parameter. Then anti-dig will not only generate code but also change the names of used functions, making them public and available in the main
+
+```go
+package main
+
+import dig "github.com/3timeslazy/anti-dig"
+
+func main() {
+	dig.Anti.Rename(true)
+}
+```
+

@@ -88,7 +88,7 @@ func (anti *AntiDig) Optimise(enable bool) *AntiDig {
 	return anti
 }
 
-func (anti *AntiDig) RenamePrivate(enable bool) *AntiDig {
+func (anti *AntiDig) Rename(enable bool) *AntiDig {
 	anti.rename = enable
 	return anti
 }
