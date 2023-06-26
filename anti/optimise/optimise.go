@@ -18,96 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package optimiser
+package optimise
 
 import (
 	"fmt"
 	"go/ast"
-	"go/build"
-	"go/parser"
-	"go/printer"
 	"go/token"
-	"io"
 	"strings"
-	"unicode"
 
-	rename "github.com/3timeslazy/anti-dig/anti/gorename"
 	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/slices"
 	"golang.org/x/tools/go/ast/astutil"
 )
 
-type Optimiser struct {
-	Output   io.Writer
-	VarTypes map[string]string
-
-	Rename bool
-}
-
-func (opt *Optimiser) PrintOptimised(generated string) error {
-	fset := token.NewFileSet()
-
-	generatedFile, err := parser.ParseFile(fset, "provide.gen.go", generated, parser.ParseComments)
-	if err != nil {
-		return err
-	}
-
-	if opt.Rename {
-		renamePrivate(generatedFile, fset)
-	}
-	removeSelectors(generatedFile)
-	renameVariables(generatedFile, fset, opt.VarTypes)
-	removeImportsAliases(generatedFile)
-
-	err = printer.Fprint(opt.Output, fset, generatedFile)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
-func renamePrivate(file *ast.File, fset *token.FileSet) {
-	pkgAliases := map[string]string{}
-
-	imports := astutil.Imports(fset, file)
-	for _, imp := range imports {
-		for _, spec := range imp {
-			pkgAliases[spec.Name.Name] = spec.Path.Value
-		}
-	}
-
-	astutil.Apply(file, nil, func(c *astutil.Cursor) bool {
-		node := c.Node()
-
-		call, ok := node.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
-
-		pkg := sel.X.(*ast.Ident).Name
-		fnName := sel.Sel.Name
-		if unicode.IsLower(rune(fnName[0])) {
-			newFnName := fmt.Sprintf("%c%s", unicode.ToUpper(rune(fnName[0])), fnName[1:])
-
-			err := rename.Main(
-				&build.Default, "",
-				fmt.Sprintf("%s.%s", pkgAliases[pkg], fnName),
-				newFnName,
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			sel.Sel.Name = newFnName
-		}
-
-		return true
-	})
+func Optimise(fset *token.FileSet, file *ast.File, varTypes map[string]string) (*token.FileSet, *ast.File, error) {
+	removeSelectors(file)
+	renameVariables(file, fset, varTypes)
+	removeImportsAliases(file)
+	return fset, file, nil
 }
 
 func renameVariables(file *ast.File, fset *token.FileSet, varTypes map[string]string) {

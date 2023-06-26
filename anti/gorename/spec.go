@@ -203,53 +203,6 @@ func parseImportPath(e ast.Expr) string {
 	return ""
 }
 
-// parseOffsetFlag interprets the "-offset" flag value as a renaming specification.
-func parseOffsetFlag(ctxt *build.Context, offsetFlag string) (*spec, error) {
-	var spec spec
-	// Validate -offset, e.g. file.go:#123
-	parts := strings.Split(offsetFlag, ":#")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("-offset %q: invalid offset specification", offsetFlag)
-	}
-
-	spec.filename = parts[0]
-	if !buildutil.FileExists(ctxt, spec.filename) {
-		return nil, fmt.Errorf("no such file: %s", spec.filename)
-	}
-
-	bp, err := buildutil.ContainingPackage(ctxt, wd, spec.filename)
-	if err != nil {
-		return nil, err
-	}
-	spec.pkg = bp.ImportPath
-
-	for _, r := range parts[1] {
-		if !isDigit(r) {
-			return nil, fmt.Errorf("-offset %q: non-numeric offset", offsetFlag)
-		}
-	}
-	spec.offset, err = strconv.Atoi(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("-offset %q: non-numeric offset", offsetFlag)
-	}
-
-	// Parse the file and check there's an identifier at that offset.
-	fset := token.NewFileSet()
-	f, err := buildutil.ParseFile(fset, ctxt, nil, wd, spec.filename, parser.ParseComments)
-	if err != nil {
-		return nil, fmt.Errorf("-offset %q: cannot parse file: %s", offsetFlag, err)
-	}
-
-	id := identAtOffset(fset, f, spec.offset)
-	if id == nil {
-		return nil, fmt.Errorf("-offset %q: no identifier at this position", offsetFlag)
-	}
-
-	spec.fromName = id.Name
-
-	return &spec, nil
-}
-
 var wd = func() string {
 	wd, err := os.Getwd()
 	if err != nil {
