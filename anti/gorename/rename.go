@@ -21,10 +21,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	exec "golang.org/x/sys/execabs"
@@ -173,57 +171,13 @@ var reportError = func(posn token.Position, message string) {
 	fmt.Fprintf(os.Stderr, "%s: %s\n", posn, message)
 }
 
-// importName renames imports of fromPath within the package specified by info.
-// If fromName is not empty, importName renames only imports as fromName.
-// If the renaming would lead to a conflict, the file is left unchanged.
-func importName(iprog *loader.Program, info *loader.PackageInfo, fromPath, fromName, to string) error {
-	if fromName == to {
-		return nil // no-op (e.g. rename x/foo to y/foo)
-	}
-	for _, f := range info.Files {
-		var from types.Object
-		for _, imp := range f.Imports {
-			importPath, _ := strconv.Unquote(imp.Path.Value)
-			importName := path.Base(importPath)
-			if imp.Name != nil {
-				importName = imp.Name.Name
-			}
-			if importPath == fromPath && (fromName == "" || importName == fromName) {
-				from = info.Implicits[imp]
-				break
-			}
-		}
-		if from == nil {
-			continue
-		}
-		r := renamer{
-			iprog:        iprog,
-			objsToUpdate: make(map[types.Object]bool),
-			to:           to,
-			packages:     map[*types.Package]*loader.PackageInfo{info.Pkg: info},
-		}
-		r.check(from)
-		if r.hadConflicts {
-			reportError(iprog.Fset.Position(f.Imports[0].Pos()),
-				"skipping update of this file")
-			continue // ignore errors; leave the existing name
-		}
-		if err := r.update(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+func Main(ctxt *build.Context, froms, tos []string) error {
+	// -- Parse the -from specifier ----------------------------
 
-func Main(ctxt *build.Context, offsetFlag, fromFlag, to string) error {
-	// -- Parse the -from or -offset specifier ----------------------------
-
-	if (offsetFlag == "") == (fromFlag == "") {
-		return fmt.Errorf("exactly one of the -from and -offset flags must be specified")
-	}
-
-	if !isValidIdentifier(to) {
-		return fmt.Errorf("-to %q: not a valid identifier", to)
+	for _, to := range tos {
+		if !isValidIdentifier(to) {
+			return fmt.Errorf("-to %q: not a valid identifier", to)
+		}
 	}
 
 	if Diff {
@@ -231,86 +185,43 @@ func Main(ctxt *build.Context, offsetFlag, fromFlag, to string) error {
 		writeFile = diff
 	}
 
-	var spec *spec
-	var err error
-	if fromFlag != "" {
-		spec, err = parseFromFlag(ctxt, fromFlag)
-	} else {
-		spec, err = parseOffsetFlag(ctxt, offsetFlag)
-	}
-	if err != nil {
-		return err
-	}
+	specs := []*spec{}
+	for i, from := range froms {
+		spec, err := parseFromFlag(ctxt, from)
+		if err != nil {
+			return err
+		}
 
-	if spec.fromName == to {
-		return fmt.Errorf("the old and new names are the same: %s", to)
+		if spec.fromName == tos[i] {
+			return fmt.Errorf("the old and new names are the same: %s", tos[i])
+		}
+
+		specs = append(specs, spec)
 	}
 
 	// -- Load the program consisting of the initial package  -------------
 
-	iprog, err := loadProgram(ctxt, map[string]bool{spec.pkg: true})
+	pkgs := map[string]bool{}
+	for _, spec := range specs {
+		pkgs[spec.pkg] = true
+	}
+	iprog, err := loadProgram(ctxt, pkgs)
 	if err != nil {
 		return err
 	}
 
+	for i, spec := range specs {
+		rename(iprog, spec, tos[i])
+	}
+
+	return nil
+}
+
+func rename(iprog *loader.Program, spec *spec, to string) error {
 	fromObjects, err := findFromObjects(iprog, spec)
 	if err != nil {
 		return err
 	}
-
-	// -- Load a larger program, for global renamings ---------------------
-
-	/*
-		if requiresGlobalRename(fromObjects, to) {
-			// For a local refactoring, we needn't load more
-			// packages, but if the renaming affects the package's
-			// API, we we must load all packages that depend on the
-			// package defining the object, plus their tests.
-
-			if Verbose {
-				log.Print("Potentially global renaming; scanning workspace...")
-			}
-
-			// Scan the workspace and build the import graph.
-			_, rev, errors := importgraph.Build(ctxt)
-			if len(errors) > 0 {
-				// With a large GOPATH tree, errors are inevitable.
-				// Report them but proceed.
-				fmt.Fprintf(os.Stderr, "While scanning Go workspace:\n")
-				for path, err := range errors {
-					fmt.Fprintf(os.Stderr, "Package %q: %s.\n", path, err)
-				}
-			}
-
-			// Enumerate the set of potentially affected packages.
-			affectedPackages := make(map[string]bool)
-			for _, obj := range fromObjects {
-				// External test packages are never imported,
-				// so they will never appear in the graph.
-				for path := range rev.Search(obj.Pkg().Path()) {
-					affectedPackages[path] = true
-				}
-			}
-
-			// TODO(adonovan): allow the user to specify the scope,
-			// or -ignore patterns?  Computing the scope when we
-			// don't (yet) support inputs containing errors can make
-			// the tool rather brittle.
-
-			// Re-load the larger program.
-			iprog, err = loadProgram(ctxt, affectedPackages)
-			if err != nil {
-				return err
-			}
-
-			fromObjects, err = findFromObjects(iprog, spec)
-			if err != nil {
-				return err
-			}
-		}
-	*/
-
-	// -- Do the renaming -------------------------------------------------
 
 	r := renamer{
 		iprog:        iprog,
@@ -421,33 +332,6 @@ func containsHardErrors(errors []error) bool {
 		if err, ok := err.(types.Error); ok && err.Soft {
 			continue
 		}
-		return true
-	}
-	return false
-}
-
-// requiresGlobalRename reports whether this renaming could potentially
-// affect other packages in the Go workspace.
-func requiresGlobalRename(fromObjects []types.Object, to string) bool {
-	var tfm bool
-	for _, from := range fromObjects {
-		if from.Exported() {
-			return true
-		}
-		switch objectKind(from) {
-		case "type", "field", "method":
-			tfm = true
-		}
-	}
-	tfm = true
-	if ast.IsExported(to) && tfm {
-		// A global renaming may be necessary even if we're
-		// exporting a previous unexported name, since if it's
-		// the name of a type, field or method, this could
-		// change selections in other packages.
-		// (We include "type" in this list because a type
-		// used as an embedded struct field entails a field
-		// renaming.)
 		return true
 	}
 	return false

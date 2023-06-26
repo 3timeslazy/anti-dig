@@ -23,11 +23,16 @@ package anti
 import (
 	"container/list"
 	"fmt"
+	"go/parser"
+	"go/printer"
+	"go/token"
 	"io"
 	"reflect"
 	"strings"
 
-	"github.com/3timeslazy/anti-dig/anti/optimiser"
+	"github.com/3timeslazy/anti-dig/anti/optimise"
+	"github.com/3timeslazy/anti-dig/anti/overwrite"
+
 	"github.com/iancoleman/strcase"
 	"golang.org/x/exp/slices"
 )
@@ -100,17 +105,26 @@ func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 		anti.generateFunc(invokedType),
 	}, "\n")
 
-	if !anti.optimise {
-		_, err := io.WriteString(anti.output, generated)
+	fset := token.NewFileSet()
+	generatedFile, err := parser.ParseFile(fset, "provide.gen.go", generated, parser.ParseComments)
+	if err != nil {
 		return err
 	}
 
-	opt := optimiser.Optimiser{
-		Output:   anti.output,
-		VarTypes: anti.varTypes,
-		Rename:   anti.rename,
+	if anti.rename {
+		err = overwrite.Rename(fset, generatedFile)
+		if err != nil {
+			return err
+		}
 	}
-	return opt.PrintOptimised(generated)
+	if anti.optimise {
+		fset, generatedFile, err = optimise.Optimise(fset, generatedFile, anti.varTypes)
+		if err != nil {
+			return err
+		}
+	}
+
+	return printer.Fprint(anti.output, fset, generatedFile)
 }
 
 func (anti *AntiDig) generateFunc(invokedType reflect.Type) string {
