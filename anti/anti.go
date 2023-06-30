@@ -145,7 +145,17 @@ func (anti *AntiDig) returnStmt(invokedType reflect.Type) string {
 	returnStmt := "return "
 	for i := 0; i < invokedType.NumIn(); i++ {
 		typ := invokedType.In(i)
-		returnStmt += fmt.Sprintf("%s, ", anti.Varname(typ))
+		alias := typeAlias{Type: typ}
+		varname := ""
+
+		if _, ok := anti.varnames[alias]; ok {
+			varname = anti.Varname(typ)
+		} else {
+			varname = anti.groupVarnames[alias]
+			varname += fmt.Sprintf("_%d", anti.seqnames[alias])
+		}
+
+		returnStmt += fmt.Sprintf("%s, ", varname)
 	}
 	return strings.TrimRight(returnStmt, ", ")
 }
