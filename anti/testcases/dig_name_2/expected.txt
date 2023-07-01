@@ -1,0 +1,18 @@
+package main
+
+import (
+	"github.com/3timeslazy/anti-dig/anti/testcases/dig_name_2/server"
+)
+
+func Provide() server.Server {
+	var3_0 := server.NewV1()
+	var2_v1 := var3_0.Handler
+	var6_0 := server.NewV2()
+	var5_v2 := var6_0.Handler
+	var7_0 := server.Handlers{
+		V1: var2_v1,
+		V2: var5_v2,
+	}
+	var1 := server.NewServer(var7_0)
+	return var1
+}
