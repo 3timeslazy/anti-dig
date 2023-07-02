@@ -339,12 +339,12 @@ func (rs resultSingle) DotResult() []*dot.Result {
 }
 
 func (rs resultSingle) Extract(cw containerWriter, decorated bool, v reflect.Value) {
+	varname := Anti.NamedVarname(rs.Name, rs.Type)
+
 	if rs.ParamField != "" {
-		varname := Anti.Varname(rs.Type)
 		v := Anti.FnVars()[0]
 		Anti.AppendFnSuffix(fmt.Sprintf("%s := %s.%s", varname, v, rs.ParamField))
 	} else {
-		varname := Anti.NamedVarname(rs.Name, rs.Type)
 		Anti.AppendFnVar(varname)
 	}
 
