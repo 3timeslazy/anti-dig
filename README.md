@@ -14,7 +14,7 @@ I have worked in many companies. In every one of them, I've seen someone using `
 
 ## Guide
 
-To use **anti-dig**, follow the the steps:
+To use **anti-dig**, follow the steps:
 
 1. Replace `go.uber.org/dig` with `github.com/3timeslazy/anti-dig` everywhere in your code
 
