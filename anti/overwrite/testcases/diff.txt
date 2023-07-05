@@ -1,0 +1,13 @@
+@@ -11,10 +11,10 @@
+ 	registry.Provide(newConsumer)
+ }
+ 
+-type consumerParam struct {
++type ConsumerParam struct {
+ 	dig.In
+ }
+ 
+-func newConsumer(consumerParam) Consumer {
++func newConsumer(ConsumerParam) Consumer {
+ 	return Consumer{}
+ }
