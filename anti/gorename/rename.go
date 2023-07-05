@@ -154,7 +154,7 @@ var (
 	Verbose bool
 )
 
-var stdout io.Writer = os.Stdout
+var Stdout io.Writer = os.Stdout
 
 type renamer struct {
 	iprog              *loader.Program
@@ -469,8 +469,15 @@ func reallyWriteFile(filename string, content []byte) error {
 	return ioutil.WriteFile(filename, content, 0644)
 }
 
+var diffed = map[string]bool{}
+
 func diff(filename string, content []byte) error {
-	renamed := fmt.Sprintf("%s.%d.renamed", filename, os.Getpid())
+	if diffed[filename] {
+		return nil
+	}
+	diffed[filename] = true
+
+	renamed := fmt.Sprintf("%s.renamed", filename)
 	if err := ioutil.WriteFile(renamed, content, 0644); err != nil {
 		return err
 	}
@@ -480,7 +487,7 @@ func diff(filename string, content []byte) error {
 	if len(diff) > 0 {
 		// diff exits with a non-zero status when the files don't match.
 		// Ignore that failure as long as we get output.
-		stdout.Write(diff)
+		Stdout.Write(diff)
 		return nil
 	}
 	if err != nil {

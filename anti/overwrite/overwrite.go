@@ -27,11 +27,17 @@ func Rename(fset *token.FileSet, file *ast.File) error {
 	astutil.Apply(file, nil, func(c *astutil.Cursor) bool {
 		node := c.Node()
 
-		call, ok := node.(*ast.CallExpr)
-		if !ok {
-			return true
+		var expr ast.Expr
+
+		switch node := node.(type) {
+		case *ast.CallExpr:
+			expr = node.Fun
+
+		case *ast.CompositeLit:
+			expr = node.Type
 		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
+
+		sel, ok := expr.(*ast.SelectorExpr)
 		if !ok {
 			return true
 		}
