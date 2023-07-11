@@ -41,13 +41,18 @@ func Rename(fset *token.FileSet, file *ast.File) error {
 		if !ok {
 			return true
 		}
+		// For the case of an anonymous function call
+		pkg, ok := sel.X.(*ast.Ident)
+		if !ok {
+			return true
+		}
 
-		pkg := sel.X.(*ast.Ident).Name
+		pkgName := pkg.Name
 		fnName := sel.Sel.Name
 		if unicode.IsLower(rune(fnName[0])) {
 			newFnName := fmt.Sprintf("%c%s", unicode.ToUpper(rune(fnName[0])), fnName[1:])
 
-			froms = append(froms, fmt.Sprintf("%s.%s", pkgAliases[pkg], fnName))
+			froms = append(froms, fmt.Sprintf("%s.%s", pkgAliases[pkgName], fnName))
 			tos = append(tos, newFnName)
 			sel.Sel.Name = newFnName
 		}
