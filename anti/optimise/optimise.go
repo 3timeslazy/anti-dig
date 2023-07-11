@@ -224,7 +224,7 @@ func callExprNames(ident *ast.Ident, file *ast.File, varTypes map[string]string)
 
 		cg := &ast.CommentGroup{
 			List: []*ast.Comment{{
-				Text:  "// TODO: anonymous functions are not yet supported. Please, fix it manually",
+				Text:  "// TODO(anti-dig): unable to correctly generate an anonymous function call. Please, fix it manually",
 				Slash: ident.Pos() - 1,
 			}},
 		}
