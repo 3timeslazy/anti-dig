@@ -11,6 +11,7 @@ I have worked in many companies. In every one of them, I've seen someone using `
 * [Guide](#guide)
 * [Example](#example)
 * [Configuration](#configuration)
+* [Limitations](#limitations)
 
 ## Guide
 
@@ -215,3 +216,14 @@ func main() {
 }
 ```
 
+## Limitations
+
+When creating this library, I focused on the go.uber.org/dig features used in my company. Therefore, at the moment, **not** all features are supported, such as:
+- dig.As
+- Decorators
+- Callbacks
+- Perhaps, something else
+
+Also, not everything can be easily and correctly generated. For example, anonymous function calls
+
+So if you are using a feature not supported by anti-dig, feel free to contribute by raising PRs and issues!
