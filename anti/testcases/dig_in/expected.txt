@@ -4,10 +4,10 @@ import (
 	server "github.com/3timeslazy/anti-dig/anti/testcases/dig_in/server"
 )
 
-func Provide() server.RunParams {
+func Provide() (server.RunParams, error) {
 	var1 := server.NewConfig()
 	var2_0 := server.RunParams{
 		Config: var1,
 	}
-	return var2_0
+	return var2_0, nil
 }

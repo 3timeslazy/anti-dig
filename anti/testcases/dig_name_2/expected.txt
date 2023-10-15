@@ -4,7 +4,7 @@ import (
 	server "github.com/3timeslazy/anti-dig/anti/testcases/dig_name_2/server"
 )
 
-func Provide() server.Server {
+func Provide() (server.Server, error) {
 	var3_0 := server.NewV1()
 	var2_v1 := var3_0.Handler
 	var5_0 := server.NewV2()
@@ -14,5 +14,5 @@ func Provide() server.Server {
 		V2: var4_v2,
 	}
 	var1 := server.NewServer(var6_0)
-	return var1
+	return var1, nil
 }
