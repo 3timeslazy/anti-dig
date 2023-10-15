@@ -128,9 +128,9 @@ func (anti *AntiDig) Generate(invokedType reflect.Type) error {
 }
 
 func (anti *AntiDig) generateFunc(invokedType reflect.Type) string {
-	anti.exprs = append(anti.exprs, anti.returnStmt(invokedType))
+	anti.exprs = append(anti.exprs, anti.returnStmt(invokedType)+", nil")
 
-	returnedTypes := anti.returnedTypes(invokedType)
+	returnedTypes := anti.returnedTypes(invokedType) + ", error"
 	out := fmt.Sprintf("func Provide() (%s) {\n", returnedTypes)
 
 	for _, expr := range anti.exprs {
@@ -356,7 +356,7 @@ func (anti *AntiDig) SetErrorExpr(fntype reflect.Type) {
 			errStmt += fmt.Sprintf("%s.%s{}, ", alias, typ.Name())
 		}
 	}
-	errStmt = strings.TrimRight(errStmt, ", ")
+	errStmt += "err"
 	errExpr = []string{"if err != nil {", errStmt, "}"}
 }
 

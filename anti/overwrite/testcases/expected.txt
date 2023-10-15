@@ -4,8 +4,8 @@ import (
 	"github.com/3timeslazy/anti-dig/anti/overwrite/testcases/consumer"
 )
 
-func Provide() consumer.Consumer {
+func Provide() (consumer.Consumer, error) {
 	consumerParam := consumer.ConsumerParam{}
 	consumer := consumer.NewConsumer(consumerParam)
-	return consumer
+	return consumer, nil
 }

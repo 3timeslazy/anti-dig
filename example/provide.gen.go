@@ -15,11 +15,11 @@ import (
 	"github.com/3timeslazy/anti-dig/example/observability"
 )
 
-func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
+func Provide() (cron.Cron, *server.Server, *grpcserver.Server, error) {
 	config := config.NewConfig()
 	db, err := db.NewDB(config)
 	if err != nil {
-		return nil, nil, nil
+		return nil, nil, nil, err
 	}
 	queue1 := queue.New1()
 	queue := queue.New2()
@@ -35,7 +35,7 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 
 	handler, err := handlerv0.NewHandlerV0(db)
 	if err != nil {
-		return nil, nil, nil
+		return nil, nil, nil, err
 	}
 	httpHandlers := []handlers.Handler{
 		handler,
@@ -55,5 +55,5 @@ func Provide() (cron.Cron, *server.Server, *grpcserver.Server) {
 		Handlers: grpcHandlers,
 	}
 	grpcserverServer := grpcserver.NewServer(grpcserverServerParams)
-	return cron, server, grpcserverServer
+	return cron, server, grpcserverServer, nil
 }

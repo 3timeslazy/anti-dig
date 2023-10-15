@@ -5,8 +5,8 @@ import (
 	db "github.com/3timeslazy/anti-dig/anti/testcases/provide_many/db"
 )
 
-func Provide() db.DB {
+func Provide() (db.DB, error) {
 	var2 := config.New()
 	var1 := db.New(var2)
-	return var1
+	return var1, nil
 }
