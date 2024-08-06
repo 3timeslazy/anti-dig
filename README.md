@@ -6,6 +6,8 @@ An anti-dependency-injection drop-in replacement toolkit for `go.uber.org/dig`.
 
 I have worked in many companies. In every one of them, I've seen someone using `go.uber.org/dig`. And in each case, after a while the team wanted to get rid of it, but it didn't always work because it always took a lot of time and effort. Faced with this problem again, I decided to write a tool to help others get rid of the library.
 
+[Here are the slides](https://docs.google.com/presentation/d/1127nLUsjkI1hLz8KCybCWeYVzfbnS2Te_evwbXXwLmM/edit#slide=id.g2538112cbef_0_0) from the original Berlin Go Meetup, where `anti-dig` was initially presented. In the case Google killed the Slides, there is [a pdf file in the repo](./Getting&#32;rid&#32;of&#32;uber's&#32;dig.pdf).
+
 ## Table of Contents
 
 * [Guide](#guide)
